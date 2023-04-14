@@ -55,7 +55,167 @@ class SDS5034(object):
         # set chunk size for communication 
         self.sds.chunk_size = 20*1024*1024
 
-    def _get_wave_preamble(self):
+    # useful read and write passing to pyvisa.resources.TCPIPInstrument class
+    def close(self):                        self.sds.close()
+    def flush(self):                        self.sds.flush()
+    def read(self, *args, **kwargs):        return self.sds.read(*args, **kwargs)
+    def read_raw(self, *args, **kwargs):    return self.sds.read_raw(*args, **kwargs)
+    def read_bytes(self, *args, **kwargs):  return self.sds.read_bytes(*args, **kwargs)
+    def query(self, *args, **kwargs):       return self.sds.query(*args, **kwargs)
+    def write(self, *args, **kwargs):       return self.sds.write(*args, **kwargs)
+    def write_raw(self, *args, **kwargs):   return self.sds.write_raw(*args, **kwargs)
+
+    # simple basic commands
+    def default(self):      self.write('*RST')
+    def reboot(self):       self.write('SYSTem:REBoot')
+    def run(self):          self.write('ACQuire:STATE RUN')
+    def stop(self):         self.write('ACQuire:STATE STOP')
+
+    # simple queries
+    def get_adc_resolution(self):   return int(self.query('ACQuire:RESolution?').replace('Bits', ''))
+    def get_ch_coupling(self, ch):  return self.query(f'CHANnel{int(ch)}:COUPling?')
+    def get_ch_impedance(self, ch): return self.query(f'CHANnel{int(ch)}:IMP?')
+    def get_ch_offset(self, ch):    return self.query(f'CHANnel{int(ch)}:OFFS?')
+    def get_ch_probe(self, ch):     return self.query(f'CHANnel{int(ch)}:PROBe?')
+    def get_ch_state(self, ch):     return self.query(f'CHANnel{int(ch)}:SWITch?')
+    def get_ch_unit(self, ch):      return self.query(f'CHANnel{int(ch)}:UNIT?')
+    def get_ch_vscale(self, ch):    return self.query(f'CHANnel{int(ch)}:SCALe?')
+    def get_id(self):               return self.query('*IDN?')
+    def get_sequence(self):         return self.query('ACQuire:SEQuence?')
+    def get_sequence_count(self):   return self.query('ACQuire:SEQuence:COUNt?')
+    def get_smpl_rate(self):        return self.query('ACQuire:SRATe?')
+    def get_time_scale(self):       return self.query('TIMebase:SCALe?')
+    def get_trig_mode(self):        return self.query('TRIGger:MODE?')
+    def get_trig_state(self):       return self.query('TRIGger:STATus?')
+    def get_wave_ch(self):          return self.query('WAVeform:SOURce?')
+    def get_wave_startpt(self):     return self.query('WAVeform:STARt?')
+    def get_wave_interval(self):    return self.query('WAVeform:INTerval?')
+    def get_wave_npts(self):        return float(self.query('WAVeform:POINt?').strip())
+    def get_wave_maxpt(self):       return float(self.query('WAVeform:MAXPoint?').strip())
+    def get_wave_width(self):       return self.query('WAVeform:WIDTh?')
+    
+    # simple commands
+    def set_ch_coupling(self, ch, mode): 
+        """
+            ch: int, channel number
+            mode: one of DC, AC, GND
+        """ 
+        mode = mode.upper()
+        assert mode in ('DC', 'AC', 'GND'), 'mode must be one of DC, AC, or GND'
+        self.write(f'CHANnel{int(ch)}:COUPling {mode}')
+    
+    def set_ch_impedance(self, ch, z): 
+        """
+            ch: int, channel number
+            impedance: one of '1M' or '50'
+        """ 
+        z = str(z).upper()
+
+        if z == '1M':
+            self.write(f'CHANnel{int(ch)}:IMP ONEMeg')
+        elif z == '50':
+            self.write(f'CHANnel{int(ch)}:IMP FIFTy')
+        else:
+            raise RuntimeError('z must be one of "1M" or "50"')
+
+    def set_ch_offset(self, ch, offset):
+        return self.write(f'CHANnel{int(ch)}:OFFSet {offset:g}')
+    
+    def set_ch_probe(self, ch, attenuation=None):
+        """
+            If attenuation is none, set to default. Else attenuation is float
+        """
+        if attenuation is None:
+            self.write(f'CHANnel{int(ch)}:PROBe DEFault')
+        else:
+            assert 1e-6 < attenuation < 1e6, 'Attenuation out of bounds: (1e-6, 1e6)'
+            self.write(f'CHANnel{int(ch)}:PROBe VALue {attenuation:g}')
+    
+    def set_ch_state(self, ch, on=True):
+        state = 'ON' if on else 'OFF'
+        self.write(f'CHANnel{int(ch)}:SWITch {state}')
+        
+    def set_ch_unit(self, ch, unit):
+        """
+            unit: str, one of V or A for volts or amps resp.
+        """
+        unit = unit.upper()
+        assert unit in ('V', 'A'), 'unit must be one of "V" or "A"'
+        self.write(f'CHANnel{int(ch)}:UNIT {unit}')
+
+    def set_ch_vscale(self, ch, scale):
+        """
+            set volts/div
+        """
+        return self.write(f'CHANnel{int(ch)}:SCALe {scale:g}')
+
+    def set_sequence(self, state): 
+        if state:
+            self.write('ACQuire:SEQuence ON')
+        else:
+            self.write('ACQuire:SEQuence OFF')
+
+    def set_sequence_count(self, value): 
+        self.write(f'ACQuire:SEQuence:COUNt {int(value)}')
+        
+    def set_smpl_rate(self, rate):
+        return self.write(f'ACQuire:SRATe {rate:g}')
+    
+    def set_time_scale(self, scale):
+        """
+            scale: seconds per division
+        """
+        self.write(f'TIMebase:SCALe {scale:g}')
+
+    def set_trig_mode(self, mode):
+        """
+            mode in "single", 'normal', 'auto'
+        """
+
+        mode = mode.lower()
+
+        if mode in 'single': self.write('TRIGger:MODE SINGle')
+        elif mode in 'normal': self.write('TRIGger:MODE NORMal')
+        elif mode in 'auto': self.write('TRIGger:MODE AUTO')
+        else:
+            raise RuntimeError("mode must be one of 'single', 'normal', or 'auto'")
+
+    def set_trig_state(self, state):
+        """
+            state one of RUN or STOP
+        """     
+        if state.upper() in 'RUN':
+            self.write('TRIGger:RUN')
+        elif state.upper() in 'STOP':
+            self.write('TRIGger:STOP')
+        else:
+            raise RuntimeError('Bad state input, should be one of RUN or STOP')
+
+    def set_wave_ch(self, ch):          
+        self.write(f'WAVeform:SOURce CH{int(ch)}')
+    
+    def set_wave_startpt(self, pt):
+        self.write(f'WAVeform:STARt {int(pt)}')
+    
+    def set_wave_interval(self, interval):
+        self.write(f'WAVeform:INTerval {int(interval)}')
+
+    def set_wave_npts(self, npts):        
+        """
+            The command sets the number of waveform points to be
+        """
+        self.write(f'WAVeform:POINt {int(npts)}')
+
+    def set_wave_width(self, format):
+        format = format.upper()
+        if format in 'BYTE':
+            self.write('WAVeform:WIDTh BYTE')
+        elif format in 'WORD':
+            self.write('WAVeform:WIDTh WORD')
+
+
+    # read waveform commands
+    def get_wave_preamble(self):
         """
             Get preamble for waveform data
 
@@ -181,177 +341,44 @@ class SDS5034(object):
 
         return preamble
 
-    # useful read and write passing to pyvisa.resources.TCPIPInstrument class
-    def close(self):                        self.sds.close()
-    def flush(self):                        self.sds.flush()
-    def read(self, *args, **kwargs):        return self.sds.read(*args, **kwargs)
-    def read_raw(self, *args, **kwargs):    return self.sds.read_raw(*args, **kwargs)
-    def read_bytes(self, *args, **kwargs):  return self.sds.read_bytes(*args, **kwargs)
-    def query(self, *args, **kwargs):       return self.sds.query(*args, **kwargs)
-    def write(self, *args, **kwargs):       return self.sds.write(*args, **kwargs)
-    def write_raw(self, *args, **kwargs):   return self.sds.write_raw(*args, **kwargs)
-
-    # simple basic commands
-    def default(self):      self.write('*RST')
-    def reboot(self):       self.write('SYSTem:REBoot')
-    def run(self):          self.write('ACQuire:STATE RUN')
-    def stop(self):         self.write('ACQuire:STATE STOP')
-
-    # simple queries
-    def get_adc_resolution(self):   return self.query('ACQuire:RESolution?')
-    def get_ch_coupling(self, ch):  return self.query(f'CHANnel{int(ch)}:COUPling?')
-    def get_ch_impedance(self, ch): return self.query(f'CHANnel{int(ch)}:IMP?')
-    def get_ch_offset(self, ch):    return self.query(f'CHANnel{int(ch)}:OFFS?')
-    def get_ch_probe(self, ch):     return self.query(f'CHANnel{int(ch)}:PROBe?')
-    def get_ch_state(self, ch):     return self.query(f'CHANnel{int(ch)}:SWITch?')
-    def get_ch_unit(self, ch):      return self.query(f'CHANnel{int(ch)}:UNIT?')
-    def get_ch_vscale(self, ch):    return self.query(f'CHANnel{int(ch)}:SCALe?')
-    def get_id(self):               return self.query('*IDN?')
-    def get_sequence(self):         return self.query('ACQuire:SEQuence?')
-    def get_sequence_count(self):   return self.query('ACQuire:SEQuence:COUNt?')
-    def get_smpl_rate(self):        return self.query('ACQuire:SRATe?')
-    def get_time_scale(self):       return self.query('TIMebase:SCALe?')
-    def get_trig_mode(self):        return self.query('TRIGger:MODE?')
-    def get_trig_state(self):       return self.query('TRIGger:STATus?')
-    
-    # simple commands
-    def set_ch_coupling(self, ch, mode): 
-        """
-            ch: int, channel number
-            mode: one of DC, AC, GND
-        """ 
-        mode = mode.upper()
-        assert mode in ('DC', 'AC', 'GND'), 'mode must be one of DC, AC, or GND'
-        self.write(f'CHANnel{int(ch)}:COUPling {mode}')
-    
-    def set_ch_impedance(self, ch, z): 
-        """
-            ch: int, channel number
-            impedance: one of '1M' or '50'
-        """ 
-        z = str(z).upper()
-
-        if z == '1M':
-            self.write(f'CHANnel{int(ch)}:IMP ONEMeg')
-        elif z == '50':
-            self.write(f'CHANnel{int(ch)}:IMP FIFTy')
-        else:
-            raise RuntimeError('z must be one of "1M" or "50"')
-
-    def set_ch_offset(self, ch, offset):
-        return self.write(f'CHANnel{int(ch)}:OFFSet {offset:g}')
-    
-    def set_ch_probe(self, ch, attenuation=None):
-        """
-            If attenuation is none, set to default. Else attenuation is float
-        """
-        if attenuation is None:
-            self.write(f'CHANnel{int(ch)}:PROBe DEFault')
-        else:
-            assert 1e-6 < attenuation < 1e6, 'Attenuation out of bounds: (1e-6, 1e6)'
-            self.write(f'CHANnel{int(ch)}:PROBe VALue {attenuation:g}')
-    
-    def set_ch_state(self, ch, on=True):
-        state = 'ON' if on else 'OFF'
-        self.write(f'CHANnel{int(ch)}:SWITch {state}')
-        
-    def set_ch_unit(self, ch, unit):
-        """
-            unit: str, one of V or A for volts or amps resp.
-        """
-        unit = unit.upper()
-        assert unit in ('V', 'A'), 'unit must be one of "V" or "A"'
-        self.write(f'CHANnel{int(ch)}:UNIT {unit}')
-
-    def set_ch_vscale(self, ch, scale):
-        """
-            set volts/div
-        """
-        return self.write(f'CHANnel{int(ch)}:SCALe {scale:g}')
-
-    def set_sequence(self, state): 
-        if state:
-            self.write('ACQuire:SEQuence ON')
-        else:
-            self.write('ACQuire:SEQuence OFF')
-
-    def set_sequence_count(self, value): 
-        self.write(f'ACQuire:SEQuence:COUNt {int(value)}')
-        
-    def set_smpl_rate(self, rate):
-        return self.write(f'ACQuire:SRATe {rate:g}')
-    
-    def set_time_scale(self, scale):
-        """
-            scale: seconds per division
-        """
-        self.write(f'TIMebase:SCALe {scale:g}')
-
-    def set_trig_mode(self, mode):
-        """
-            mode in "single", 'normal', 'auto'
-        """
-
-        mode = mode.lower()
-
-        if mode in 'single': self.write('TRIGger:MODE SINGle')
-        elif mode in 'normal': self.write('TRIGger:MODE NORMal')
-        elif mode in 'auto': self.write('TRIGger:MODE AUTO')
-        else:
-            raise RuntimeError("mode must be one of 'single', 'normal', or 'auto'")
-
-    def set_trig_state(self, state):
-        """
-            state one of RUN or STOP
-        """     
-        if state.upper() in 'RUN':
-            self.write('TRIGger:RUN')
-        elif state.upper() in 'STOP':
-            self.write('TRIGger:STOP')
-        else:
-            raise RuntimeError('Bad state input, should be one of RUN or STOP')
-
-    # read waveform
-    def read_ch(self, ch, start_pt=0):
+    def read_wave_ch(self, ch, start_pt=0):
         """
             Read data from channel
         """
 
-        # clean input
-        ch = int(ch)
-        start_pt = int(start_pt)
-
         # setup input
-        self.write(f"WAVeform:STARt {start_pt}")  # start measuring from point 0
-        self.write(f"WAV:SOURce C{ch}")      # set channel to read from
+        self.set_wave_startpt(start_pt)
+        self.set_wave_ch(ch)
+        
+        # set number of points to read from
+        points = self.get_wave_npts()
+        one_piece_num = self.get_wave_maxpt()
 
-        # read waveform preamble
-        preamble = self._get_wave_preamble()
+        if points == 0:
+            preamble = self.get_wave_preamble()
+            points = preamble['data_npts']
+            self.set_wave_npts(points)
 
-        points = float(self.query(":ACQuire:POINts?").strip())
-        one_piece_num =float(self.query(":WAVeform:MAXPoint?").strip())
-
-        # ??
         if points > one_piece_num:
-            self.write(":WAVeform:POINt {}".format(one_piece_num))
+            self.set_wave_npts(one_piece_num)
 
         # number of bits used in data read
-        nbits = int(self.query('ACQuire:RESolution?').replace('Bits', ''))
+        nbits = self.get_adc_resolution()
         if nbits > 8:
-            self.write(":WAVeform:WIDTh WORD")
+            self.set_wave_width('WORD')
 
         # read waveform data? 
         read_times = math.ceil(points/one_piece_num)
         recv_all = []
-        for i in range(0,read_times):
+        for i in range(0, read_times):
             start = i*one_piece_num
-            self.write(":WAVeform:STARt {}".format(start))
+            self.set_wave_startpt(start)
             self.write("WAV:DATA?")
             recv_rtn = self.read_raw()
             recv = list(recv_rtn[recv_rtn.find(b'#') + 11:-2])
             recv_all += recv
 
-        # convert to numbers? 
+        # convert bits to float
         if nbits > 8:
             for i in range(0, int(len(recv_all) / 2)):
                 data_16bit = recv_all[2 * i + 1] * 256 + recv_all[2 * i]
@@ -359,17 +386,29 @@ class SDS5034(object):
                 convert_data.append(data)
         else:
             convert_data = recv_all
-
+        
         # convert ints to volts
         volt_value = []
         for data in convert_data:
-            if data > pow(2,nbits-1)-1:#12bit-2047,8bit-127
+            
+            # 12bit-2047, 8bit-127
+            if data > pow(2,nbits-1)-1:
                 data = data - pow(2,nbits)
             else:
                 pass
             volt_value.append(data)
-        del recv,recv_all,convert_data
-        gc.collect()
+        
+        self.data_volts = np.array(volt_value)
+        return self.data_volts
+
+    def read_wave_time(self, start_pt=0):
+        """
+            Get timestampts for waveform data
+        """
+
+        # read waveform preamble
+        self.set_wave_startpt(start_pt)
+        preamble = self.get_wave_preamble()
 
         # get times
         time_value = []
@@ -379,9 +418,7 @@ class SDS5034(object):
             time_value.append(time_data)
         print(len(volt_value))
 
-        plt.figure(figsize=(7, 5))
-        plt.plot(time_value, volt_value, markersize=2, label=u"Y-T")
-        plt.legend()
-
-s = SDS5034()
+        # plt.figure(figsize=(7, 5))
+        # plt.plot(time_value, volt_value, markersize=2, label=u"Y-T")
+        # plt.legend()
 
