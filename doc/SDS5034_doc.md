@@ -10,13 +10,14 @@ Classes
 `SDS5034(hostname='tucan-scope1.triumf.ca')`
 :   Connect to siglent digital oscilloscope and read waveforms   
 
-    hostname: ip address or DNC lookup of device
-
     Instance variables
 
+        preambles: dict of preamble values, saved as measured
         sds: pyvisa resource allowing write/read/query to the device
-    
-    
+        waveforms: pd.DataFrame of waveform data in volts
+
+    hostname: ip address or DNC lookup of device
+
 ### Class variables
 
 `ADDRESS`
@@ -35,6 +36,12 @@ Classes
 
 `default(self)`
 :   Resets the oscilloscope to the default configuration, equivalent to the Default button on the front panel
+
+`draw_wave(self, ch, ax=None)`
+:   Draw all read waveforms, as shown on scope screen
+    
+    ch: int, channel id
+    ax: plt.Axes object for drawing, if none then make new
 
 `flush(self)`
 :   Flush connection buffer
@@ -173,15 +180,15 @@ Classes
 `read_raw(self, *args, **kwargs)`
 :   Read raw data from stream
 
-`read_wave_ch(self, ch, start_pt=0)`
-:   Returns the waveform data of the source channel in volts
+`read_wave_active(self, start_pt=0)`
+:   Read the waveforms of all active (displayed) analog input channels
     
-    ch:         int, channel id number
     start_pt:   int, starting point to read from (default: 0)
 
-`read_wave_time(self, start_pt=0)`
-:   Get timestampts for waveform data
+`read_wave_ch(self, ch, start_pt=0)`
+:   Returns the waveform data of a single source channel in volts
     
+    ch:         int, channel id number
     start_pt:   int, starting point to read from (default: 0)
 
 `reboot(self)`

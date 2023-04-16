@@ -3,6 +3,7 @@
 # March 2023
 
 import numpy as np 
+import pandas as pd
 import matplotlib.pyplot as plt
 import pyvisa, struct, math
 
@@ -26,7 +27,9 @@ class SDS5034(object):
 
         Instance variables
 
+            preambles: dict of preamble values, saved as measured
             sds: pyvisa resource allowing write/read/query to the device
+            waveforms: pd.DataFrame of waveform data in volts
     """
 
     # global variables
@@ -60,6 +63,10 @@ class SDS5034(object):
 
         # set chunk size for communication 
         self.sds.chunk_size = 20*1024*1024
+
+        # set data storage
+        self.preambles = {}
+        self.waveforms = pd.DataFrame()
 
     # useful read and write passing to pyvisa.resources.TCPIPInstrument class
     def close(self):                        
@@ -662,11 +669,14 @@ class SDS5034(object):
         preamble['v_per_div'] = preamble['v_per_div_raw'] * preamble['probe_atten']
         preamble['v_offset'] = preamble['v_offset_raw'] * preamble['probe_atten']
 
+        # save
+        self.preambles[preamble['channel']] = preamble
+
         return preamble
 
     def read_wave_ch(self, ch, start_pt=0):
         """
-            Returns the waveform data of the source channel in volts
+            Returns the waveform data of a single source channel in volts
 
             ch:         int, channel id number
             start_pt:   int, starting point to read from (default: 0)
@@ -724,31 +734,79 @@ class SDS5034(object):
                 pass
             volt_value.append(data)
         
-        self.data_volts = np.array(volt_value)
-        return self.data_volts
+        volt_value = np.array(volt_value)
+        
+        # read waveform preamble
+        preamble = self.get_wave_preamble()
+        code = preamble['code_per_div']
+        vdiv = preamble['v_per_div']
+        offset = preamble['v_offset']
+        tdiv = preamble['t_per_div']
+        delay = preamble['t_delay_s']
+        interval = preamble['sample_interval']
 
-    def read_wave_time(self, start_pt=0):
+        # adjust voltage values
+        volt_value = volt_value / code * vdiv - offset
+
+        # get times
+        idx = np.arange(len(volt_value))
+        time_value = -delay - (tdiv * self.HORI_NUM / 2) + idx * interval
+        
+        # make data frame for output
+        df = pd.DataFrame({f'CH{ch}':volt_value, 'time_s':time_value})
+        df.set_index('time_s', inplace=True)
+
+        # save
+        self.waveforms.drop(columns=[f'CH{ch}'], errors='ignore', inplace=True)
+        self.waveforms = pd.concat((self.waveforms, df), axis='columns')
+
+        return df
+
+    def read_wave_active(self, start_pt=0):
         """
-            Get timestampts for waveform data
+            Read the waveforms of all active (displayed) analog input channels
 
             start_pt:   int, starting point to read from (default: 0)
         """
 
-        # read waveform preamble
-        self.set_wave_startpt(start_pt)
-        preamble = self.get_wave_preamble()
+        # iterate over all possible channels
+        waves = []
+        for i in range(1, 5):
 
-        # get times
-        time_value = []
-        for idx in range(0, preamble['data_npts']):
-            volt_value[idx] = volt_value[idx] / code * float(vdiv) - float(offset)
-            time_data = -float(delay) - (float(tdiv) * self.HORI_NUM / 2) + idx * interval
-            time_value.append(time_data)
+            if self.get_ch_state(i).strip() == 'ON':
+                waves.append(self.read_wave_ch(i, start_pt=start_pt))
 
+        # make dataframe
+        df = pd.concat(waves, axis='columns')
 
-        print(len(volt_value))
+        # save
+        self.waveforms.drop(columns=df.columns, errors='ignore', inplace=True)
+        self.waveforms = pd.concat((self.waveforms, df), axis='columns')
 
-        # plt.figure(figsize=(7, 5))
-        # plt.plot(time_value, volt_value, markersize=2, label=u"Y-T")
-        # plt.legend()
+        return df
+                
+    def draw_wave(self, ch, ax=None):
+        """
+            Draw all read waveforms, as shown on scope screen
 
+            ch: int, channel id
+            ax: plt.Axes object for drawing, if none then make new
+        """
+
+        # set axes
+        if ax is None: 
+            ax = plt.axes()
+
+        # draw
+        df = self.waveforms[f'CH{ch}']
+        ax.plot(df.index.values, df.values, label=f'CH{ch}')
+
+        # get preamble
+        pre = self.preambles[f'CH{ch}']
+
+        # set plot elements
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Voltage (V)')
+        ax.set_xlim(-5*pre['t_per_div'], 5*pre['t_per_div'])
+        ax.set_ylim(-4*pre['v_per_div'], 4*pre['v_per_div'])
+        ax.legend(fontsize='x-small')
