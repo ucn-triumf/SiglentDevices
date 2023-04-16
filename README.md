@@ -36,7 +36,6 @@ sds.stop()
 
 # read waveform ch1
 volts = sds.read_wave_ch(1)
-time = sds.read_wave_time()
 ```
 ---
 
