@@ -1,0 +1,266 @@
+Module SDS5034
+==============
+
+Classes
+-------
+
+`SDS5034(hostname='tucan-scope1.triumf.ca')`
+:   Connect to siglent digital oscilloscope and read waveforms   
+
+    Instance variables
+
+        sds: pyvisa resource allowing write/read/query to the device
+
+    hostname: ip address or DNC lookup of device
+
+### Class variables
+
+`ADDRESS`
+:   Address format to connect to device
+
+`TDIV_ENUM`
+:   time division values from table 2 of https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
+
+### Methods
+
+`close(self)`
+:   Close remote connection
+
+`default(self)`
+:   Resets the oscilloscope to the default configuration, equivalent to the Default button on the front panel
+
+`flush(self)`
+:   Flush connection buffer
+
+`get_adc_resolution(self)`
+:   Get the number of bits used in data acquisition
+
+`get_ch_coupling(self, ch)`
+:   Returns the coupling mode of the specified channel.
+
+`get_ch_impedance(self, ch)`
+:   Returns the current impedance setting of the selected channel.
+    ONEMeg means 1 Mohm.
+    FIFTy means 50 ohm.
+
+`get_ch_offset(self, ch)`
+:   Returns the offset value of the specified channel (volts).
+
+`get_ch_probe(self, ch)`
+:   Returns the current probe attenuation factor for the selected channel.
+
+`get_ch_state(self, ch)`
+:   Returns current status of the selected channel (ON/OFF).
+
+`get_ch_unit(self, ch)`
+:   Returns the current unit of the concerned channel.
+
+`get_ch_vscale(self, ch)`
+:   Returns the current vertical sensitivity of the specified channel (volts/div).
+
+`get_id(self)`
+:   Returns identification string of device.
+
+`get_sequence(self)`
+:   Returns whether the current sequence acquisition switch is on or not (ON/OFF).
+
+`get_sequence_count(self)`
+:   Returns the current count setting: number of memory segments to acquire. 
+    The maximum number of segments may be limited by the memory depth of your oscilloscope.
+
+`get_smpl_rate(self)`
+:   Returns the current sampling rate when in the fixed sampling rate mode.
+
+`get_time_delay(self)`
+:   This delay is the time between the trigger event and the delay reference point on the screen (seconds).
+
+`get_time_scale(self)`
+:   Returns the current horizontal scale setting in seconds per division for the main window.
+
+`get_trig_mode(self)`
+:   Returns the current mode of trigger (auto|normal|single).
+
+`get_trig_state(self)`
+:   Reurns the current state of the trigger (Arm|Ready|Auto|Trig'd|Stop|Roll}).
+
+`get_wave_ch(self)`
+:   Returns the source waveform to be transferred from the oscilloscope.
+
+`get_wave_interval(self)`
+:   Returns the interval between data points for waveform transfer.
+
+`get_wave_maxpt(self)`
+:   Returns the maximum points of one piece, when it needs to read the waveform data in pieces.
+
+`get_wave_npts(self)`
+:   Returns the number of waveform points to be transferred.
+
+`get_wave_preamble(self, ch=None)`
+:   Get preamble for waveform data of specified channel
+    
+    ch: int, channel for which to read preamble. If none, use current set channel
+
+`get_wave_startpt(self)`
+:   Returns the starting data point for waveform transfer.
+
+`get_wave_width(self)`
+:   Returns the current output format for the transfer of waveform data (byte|word).
+
+`query(self, *args, **kwargs)`
+:   Push query to device, read back response
+
+`read(self, *args, **kwargs)`
+:   Read from stream
+
+`read_bytes(self, *args, **kwargs)`
+:   Read raw bytes from stream
+
+`read_raw(self, *args, **kwargs)`
+:   Read raw data from stream
+
+`read_wave_ch(self, ch, start_pt=0)`
+:   Returns the waveform data of the source channel in volts
+    
+    ch:         int, channel id number
+    start_pt:   int, starting point to read from (default: 0)
+
+`read_wave_time(self, start_pt=0)`
+:   Get timestampts for waveform data
+    
+    start_pt:   int, starting point to read from (default: 0)
+
+`reboot(self)`
+:   Restart the scope
+
+`run(self)`
+:   Start taking data, equivalent to pressing the Run button on the front panel
+
+`set_ch_coupling(self, ch, mode)`
+:   Selects the coupling mode of the specified input channel.
+    
+    ch:     int, channel number
+    mode:   string, one of DC, AC, GND
+
+`set_ch_impedance(self, ch, z)`
+:   Sets the input impedance of the selected channel. 
+    There are two impedance values available. They are 1 MOhm and 50.
+    
+    ch:         int, channel number
+    impedance:  string, one of '1M' or '50'
+
+`set_ch_offset(self, ch, offset)`
+:   Allows adjustment of the vertical offset of the
+    specified input channel. The maximum ranges depend on the
+    fixed sensitivity setting.
+    
+    The range of legal values varies with the value set by self.set_ch_vscale 
+    
+    ch:     int, channel number
+    offset: float, offset value in volts
+
+`set_ch_probe(self, ch, attenuation=None)`
+:   Specifies the probe attenuation factor for the selected channel. 
+    This command does not change the actual input sensitivity of the oscilloscope. 
+    It changes the reference constants for scaling the  display factors, for making 
+    automatic measurements, and for setting trigger levels.
+    
+    ch:          int, channel number
+    attenuation: if none, set to default (1X); else should be a float
+
+`set_ch_state(self, ch, on=True)`
+:   Turns the display of the specified channel on or off.
+    
+    ch: int, channel number
+    on: if True, turn channel on
+
+`set_ch_unit(self, ch, unit)`
+:   Changes the unit of input signal of specified
+    channel: voltage (V) or current (A) 
+    
+    ch:     int, channel number
+    unit:   str, one of V or A for volts or amps
+
+`set_ch_vscale(self, ch, scale)`
+:   Sets the vertical sensitivity in Volts/div. If the
+    probe attenuation is changed, the scale value is multiplied by
+    the probe's attenuation factor.
+    
+    ch:     int, channel number
+    scale:  float, vertical scaling
+
+`set_sequence(self, state)`
+:   Enables or disables sequence acquisition mode.
+    
+    ch:     int, channel number
+    state:  bool, if true, sequence on
+
+`set_sequence_count(self, value)`
+:   Sets the number of memory segments to
+    acquire. The maximum number of segments may be limited
+    by the memory depth of your oscilloscope.
+    
+    value: int, count setting
+
+`set_smpl_rate(self, rate)`
+:   Sets the sampling rate when in the fixed sampling rate mode.
+    
+    rate: float, rate in pts/sec
+
+`set_time_delay(self, delay)`
+:   Specifies the main timebase delay. This delay
+    is the time between the trigger event and the delay reference
+    point on the screen
+    
+    delay: float, delay in seconds
+
+`set_time_scale(self, scale)`
+:   Sets the horizontal scale per division for the main window.
+    Due to the limitation of the expansion strategy, when the time
+    base is set from large to small, it will automatically adjust to
+    the minimum time base that can be set currently.
+    
+    scale: seconds per division
+
+`set_trig_mode(self, mode)`
+:   Sets the mode of the trigger.
+    
+    mode: str, single|normal|auto
+
+`set_trig_state(self, state)`
+:   Set trigger state (RUN|STOP)
+    
+    state: str (RUN|STOP)
+
+`set_wave_ch(self, ch)`
+:   Specifies the source waveform to be transferred from the oscilloscope 
+    
+    ch: int, channel number
+
+`set_wave_interval(self, interval)`
+:   Sets the interval between data points for waveform transfer.
+    
+    interval: int
+
+`set_wave_npts(self, npts)`
+:   Sets the number of waveform points to be transferred
+    
+    npts: int, number of points
+
+`set_wave_startpt(self, pt)`
+:   Specifies the starting data point for waveform transfer 
+    
+    pt: int, starting index
+
+`set_wave_width(self, format)`
+:   Sets the current output format for the transfer of waveform data.
+    
+    format: str, byte|word
+
+`stop(self)`
+:   Stop taking data, equivalent to pressing the Stop button on the front panel
+
+`write(self, *args, **kwargs)`
+:   Write string to device
+
+`write_raw(self, *args, **kwargs)`
+:   Write raw bytestring to device
