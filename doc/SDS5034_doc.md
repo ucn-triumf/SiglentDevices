@@ -3,22 +3,27 @@ Module SDS5034
 
 See [here](https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf) for additional SCPI commands and documentation.
 
+
 Classes
 -------
 
 `SDS5034(hostname='tucan-scope1.triumf.ca')`
 :   Connect to siglent digital oscilloscope and read waveforms   
 
+    hostname: ip address or DNC lookup of device
+
     Instance variables
 
         sds: pyvisa resource allowing write/read/query to the device
-
-    hostname: ip address or DNC lookup of device
-
+    
+    
 ### Class variables
 
 `ADDRESS`
 :   Address format to connect to device
+
+`HORI_NUM`
+:   Number of horizontal divisions
 
 `TDIV_ENUM`
 :   time division values from table 2 of https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
@@ -98,9 +103,57 @@ Classes
 :   Returns the number of waveform points to be transferred.
 
 `get_wave_preamble(self, ch=None)`
-:   Get preamble for waveform data of specified channel
+:   Get preamble for waveform data of specified channel (dict, see below for key values)
     
     ch: int, channel for which to read preamble. If none, use current set channel
+    
+    keys: 
+        adc_bit:        number of bytes in adc
+        bandwidth:      bandwidth limit. OFF, 20M, 200M
+        channel:        wave source id
+        code_per_div:   the value is different for different vertical gain of different 
+                        models
+        coupling:       vertical coupling. DC, AC, GND
+        comm_type:      chosen by remote command comm_format
+        comm_order:     chosen by remote command comm_format
+        data_bytes:     length in bytes of 1st simple data array. In transmitted 
+                        waveform, represent the number of transmitted bytes in accordance 
+                        with the parameter of the :WAVeform:POINt remote command and the 
+                        used format (see comm_type). Only for analog channels.
+        data_first_pt:  indicates the offset relative to the beginning of the trace buffer. 
+                        Value is the same as the parameter of the :WAVeform:STARt remote 
+                        command.
+        data_interval:  indicates the interval between data points for waveform transfer. 
+                        Value is the same as the parameter of the :WAVeform:INTerval remote 
+                        command.
+        data_npts:      number of data points in the data array. Only for analog channels. 
+                        When sequence is on, this value means the points number of single 
+                        sequence frame.
+        descriptor:     descriptor name. It is string, the first 8 chars are always 
+                        “WAVEDESC”
+        fixed_v_gain:   Fixed vertical gain. This is the enumerated vertical scale. 
+                        This value is not intuitive, and the vertical scale is usually
+                        represented by the value of address 156~159
+        frame_index:    the specified frame index of sequence set by the parameter 
+                        <value1> of the command :WAVeform:SEQuence. Default Value is 1
+        instrum_name:   string, always “Siglent SDS”.
+        probe_atten:    probe attenuation factor
+        read_frames:    number of sequence frames transferred this time. Used to calculate 
+                        the reading times of sequence waveform
+        sample_interval:horizontal interval. Sampling interval for time domain waveforms.
+                        Horizontal interval = 1/sampling rate
+        sum_frames:     number of sequence frames acquired. Used to calculate the reading 
+                        times of sequence waveform
+        t_delay_s:      horizontal offset. Trigger offset for the first sweep of the    
+                        trigger, seconds between the trigger and the first data point. 
+                        Unit is s.
+        t_per_div:      time_base. This is the enumerated time/div.
+        template:       template name. It is string, the first 7 chars are always “WAVEACE”.
+        v_offset:       the value of vertical offset with probe attenuation
+        v_offset_raw:   the value of vertical offset without probe attenuation
+        v_per_div:      the value of vertical scale with probe attenuation.
+        v_per_div_raw:  the value of vertical scale without probe attenuation.
+        wave_desc_bytes:length in bytes of block WAVEDESC. (346)
 
 `get_wave_startpt(self)`
 :   Returns the starting data point for waveform transfer.
