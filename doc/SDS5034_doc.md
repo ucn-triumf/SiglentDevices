@@ -14,7 +14,7 @@ Classes
 
         preambles: dict of preamble values, saved as measured
         sds: pyvisa resource allowing write/read/query to the device
-        waveforms: pd.DataFrame of waveform data in volts
+        waveforms: pd.DataFrame of waveform data in volts (includes all channels)
 
     hostname: ip address or DNC lookup of device
 
