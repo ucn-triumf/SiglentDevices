@@ -1,6 +1,8 @@
 Module SDS5034
 ==============
 
+See [here](https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf) for additional SCPI commands and documentation.
+
 Classes
 -------
 
