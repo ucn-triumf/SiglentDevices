@@ -18,8 +18,6 @@ import pyvisa, struct, math
     See manual for commands: https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
 """
 
-
-
 class SDS5034(object):
 
     """
@@ -40,11 +38,46 @@ class SDS5034(object):
     """Number of horizontal divisions"""
 
     # see table 2 from https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
-    TDIV_ENUM = (   100e-12,200e-12,500e-12,\
-                    1e-6,2e-6,5e-6,10e-6,20e-6,50e-6,100e-6,200e-6,500e-6,\
-                    1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,\
-                    1e-9,2e-9,5e-9,10e-9,20e-9,50e-9,100e-9,200e-9,500e-9,\
-                    1,2,5,10,20,50,100,200,500,1000
+    # page 559
+    TDIV_ENUM = (   200e-12,
+                    500e-12,
+                    1e-9,
+                    2e-9,
+                    5e-9,
+                    10e-9,
+                    20e-9,
+                    50e-9,
+                    100e-9,
+                    200e-9,
+                    500e-9,
+                    1e-6,
+                    2e-6,
+                    5e-6,
+                    10e-6,
+                    20e-6,
+                    50e-6,
+                    100e-6,
+                    200e-6,
+                    500e-6,
+                    1e-3,
+                    2e-3,
+                    5e-3,
+                    10e-3,
+                    20e-3,
+                    50e-3,
+                    100e-3,
+                    200e-3,
+                    500e-3,
+                    1,
+                    2,
+                    5,
+                    10,
+                    20,
+                    50,
+                    100,
+                    200,
+                    500,
+                    1000,
                 )
     """time division values from table 2 of https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf"""
 
@@ -158,11 +191,17 @@ class SDS5034(object):
     
     def get_ch_impedance(self, ch): 
         """
-            Returns the current impedance setting of the selected channel.
-            ONEMeg means 1 Mohm.
-            FIFTy means 50 ohm.
+            Returns the current impedance setting of the selected channel in Ohms.
         """
-        return float(self.query(f'CHANnel{int(ch)}:IMP?').strip())
+
+        response = self.query(f'CHANnel{int(ch)}:IMP?').strip()
+
+        if response == 'ONEMeg': 
+            return 1e6
+        elif response == 'FIFTy': 
+            return 50
+        else: 
+            raise RuntimeError(f'Unexpected device response "{response}"')
     
     def get_ch_offset(self, ch):    
         """
@@ -176,6 +215,12 @@ class SDS5034(object):
         """
         return float(self.query(f'CHANnel{int(ch)}:PROBe?').strip())
     
+    def get_ch_scale(self, ch):    
+        """
+            Returns the current vertical sensitivity of the specified channel (volts/div).
+        """
+        return float(self.query(f'CHANnel{int(ch)}:SCALe?').strip())
+    
     def get_ch_state(self, ch):     
         """
             Returns current status of the selected channel (ON/OFF).
@@ -188,18 +233,22 @@ class SDS5034(object):
         """
         return self.query(f'CHANnel{int(ch)}:UNIT?')
     
-    def get_ch_vscale(self, ch):    
-        """
-            Returns the current vertical sensitivity of the specified channel (volts/div).
-        """
-        return float(self.query(f'CHANnel{int(ch)}:SCALe?').strip())
-    
     def get_id(self):               
         """
             Returns identification string of device.
         """
         return self.query('*IDN?')
     
+    def get_run_state(self):
+        """
+            Get RUN/STOP state
+        """
+        state = self.query('ACQ:STATE?')
+        if state == 1:
+            return 'RUN'
+        else:
+            return 'STOP'
+
     def get_sequence(self):         
         """
             Returns whether the current sequence acquisition switch is on or not (ON/OFF).
@@ -247,7 +296,7 @@ class SDS5034(object):
         """
             Returns the source waveform to be transferred from the oscilloscope.
         """
-        return self.query('WAVeform:SOURce?')
+        return int(self.query('WAVeform:SOURce?')[1])
     
     def get_wave_startpt(self):     
         """
@@ -337,6 +386,17 @@ class SDS5034(object):
             assert 1e-6 < attenuation < 1e6, 'Attenuation out of bounds: (1e-6, 1e6)'
             self.write(f'CHANnel{int(ch)}:PROBe VALue {attenuation:g}')
     
+    def set_ch_scale(self, ch, scale):
+        """
+            Sets the vertical sensitivity in Volts/div. If the
+            probe attenuation is changed, the scale value is multiplied by
+            the probe's attenuation factor.
+            
+            ch:     int, channel number
+            scale:  float, vertical scaling
+        """
+        return self.write(f'CHANnel{int(ch)}:SCALe {scale:g}')
+
     def set_ch_state(self, ch, on=True):
         """
             Turns the display of the specified channel on or off.
@@ -358,17 +418,6 @@ class SDS5034(object):
         unit = unit.upper()
         assert unit in ('V', 'A'), 'unit must be one of "V" or "A"'
         self.write(f'CHANnel{int(ch)}:UNIT {unit}')
-
-    def set_ch_vscale(self, ch, scale):
-        """
-            Sets the vertical sensitivity in Volts/div. If the
-            probe attenuation is changed, the scale value is multiplied by
-            the probe's attenuation factor.
-            
-            ch:     int, channel number
-            scale:  float, vertical scaling
-        """
-        return self.write(f'CHANnel{int(ch)}:SCALe {scale:g}')
 
     def set_sequence(self, state): 
         """
@@ -455,7 +504,7 @@ class SDS5034(object):
 
             ch: int, channel number
         """
-        self.write(f'WAVeform:SOURce CH{int(ch)}')
+        self.write(f'WAVeform:SOURce C{int(ch)}')
     
     def set_wave_startpt(self, pt):
         """
@@ -624,6 +673,7 @@ class SDS5034(object):
         preamble['v_offset_raw'] = struct.unpack('f', recv[160:164])[0]
 
         # code_per_div. The value is different for different vertical gain of different models
+        # see page 562 of manual
         preamble['code_per_div'] = struct.unpack('f', recv[164:168])[0]
         if preamble['code_per_div'] > 2**8:
             preamble['code_per_div'] /= 2**4
@@ -663,7 +713,9 @@ class SDS5034(object):
         preamble['bandwidth'] = options[struct.unpack('h', recv[334:336])[0]]
         
         # Wave source. 0-C1,1-C2,2-C3,3-C4
-        preamble['channel'] = f"C{struct.unpack('h', recv[334:336])[0]}"
+        # Normal command doesn't work?
+        # preamble['channel'] = f"C{struct.unpack('h', recv[344:346])[0]}"
+        preamble['channel'] = f"C{self.get_wave_ch()}"
 
         # adjusted vertical values
         preamble['v_per_div'] = preamble['v_per_div_raw'] * preamble['probe_atten']
@@ -753,11 +805,11 @@ class SDS5034(object):
         time_value = -delay - (tdiv * self.HORI_NUM / 2) + idx * interval
         
         # make data frame for output
-        df = pd.DataFrame({f'CH{ch}':volt_value, 'time_s':time_value})
+        df = pd.DataFrame({f'C{ch}':volt_value, 'time_s':time_value})
         df.set_index('time_s', inplace=True)
 
         # save
-        self.waveforms.drop(columns=[f'CH{ch}'], errors='ignore', inplace=True)
+        self.waveforms.drop(columns=[f'C{ch}'], errors='ignore', inplace=True)
         self.waveforms = pd.concat((self.waveforms, df), axis='columns')
 
         return df
@@ -768,6 +820,10 @@ class SDS5034(object):
 
             start_pt:   int, starting point to read from (default: 0)
         """
+
+        # stop run state
+        
+        self.stop()
 
         # iterate over all possible channels
         waves = []
@@ -785,28 +841,46 @@ class SDS5034(object):
 
         return df
                 
-    def draw_wave(self, ch, ax=None):
+    def draw_wave(self, ch, ax=None, adjust_ylim=True, **plotargs):
         """
             Draw all read waveforms, as shown on scope screen
 
-            ch: int, channel id
-            ax: plt.Axes object for drawing, if none then make new
+            ch:         int, channel id
+            ax:         plt.Axes object for drawing, if none then make new
+            adjust_ylim:if True, change ylim to match scope
+            plotargs:   passed to ax.plot()
         """
 
         # set axes
         if ax is None: 
-            ax = plt.axes()
+            plt.figure()
+            ax = plt.gca()
 
         # draw
-        df = self.waveforms[f'CH{ch}']
-        ax.plot(df.index.values, df.values, label=f'CH{ch}')
+        df = self.waveforms[f'C{ch}']
+        ax.plot(df.index.values, df.values, label=f'CH{ch}', **plotargs)
 
         # get preamble
-        pre = self.preambles[f'CH{ch}']
+        pre = self.preambles[f'C{ch}']
 
         # set plot elements
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Voltage (V)')
-        ax.set_xlim(-5*pre['t_per_div'], 5*pre['t_per_div'])
-        ax.set_ylim(-4*pre['v_per_div'], 4*pre['v_per_div'])
+        if adjust_ylim:
+            ax.set_ylim(-4*pre['v_per_div'], 4*pre['v_per_div'])
         ax.legend(fontsize='x-small')
+
+    def draw_wave_all(self, ax=None, **plotargs):
+        """
+            Draw all channels
+
+            ax:         plt.Axes object for drawing, if none then make new
+            plotargs:   passed to ax.plot()
+        """
+
+        if ax is None:
+            plt.figure()
+            ax = plt.gca()
+
+        for col in self.waveforms:
+            self.draw_wave(int(col[1]), ax=ax, adjust_ylim=False, **plotargs)
