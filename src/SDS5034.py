@@ -197,9 +197,9 @@ class SDS5034(object):
         response = self.query(f'CHANnel{int(ch)}:IMP?').strip()
 
         if response == 'ONEMeg': 
-            return 1e6
+            return '1M'
         elif response == 'FIFTy': 
-            return 50
+            return '50'
         else: 
             raise RuntimeError(f'Unexpected device response "{response}"')
     
@@ -223,9 +223,11 @@ class SDS5034(object):
     
     def get_ch_state(self, ch):     
         """
-            Returns current status of the selected channel (ON/OFF).
+            Returns current status of the selected channel (ON/OFF). Return True if on. 
         """
-        return self.query(f'CHANnel{int(ch)}:SWITch?')
+        state = self.query(f'CHANnel{int(ch)}:SWITch?')
+
+        return state.strip().upper() == 'ON'
     
     def get_ch_unit(self, ch):      
         """
@@ -241,19 +243,15 @@ class SDS5034(object):
     
     def get_run_state(self):
         """
-            Get RUN/STOP state
+            Get RUN/STOP state. Return True if running. 
         """
-        state = self.query('ACQ:STATE?')
-        if state == 1:
-            return 'RUN'
-        else:
-            return 'STOP'
-
+        return bool(int(self.query('ACQ:STATE?')))
+        
     def get_sequence(self):         
         """
-            Returns whether the current sequence acquisition switch is on or not (ON/OFF).
+            Returns whether the current sequence acquisition switch is on or not (True if ON).
         """
-        return self.query('ACQuire:SEQuence?')
+        return self.query('ACQuire:SEQuence?') == 'ON'
     
     def get_sequence_count(self):   
         """
@@ -308,7 +306,7 @@ class SDS5034(object):
         """
             Returns the interval between data points for waveform transfer.
         """
-        return self.query('WAVeform:INTerval?')
+        return int(self.query('WAVeform:INTerval?'))
     
     def get_wave_npts(self):        
         """
@@ -326,9 +324,17 @@ class SDS5034(object):
         """
             Returns the current output format for the transfer of waveform data (byte|word).
         """
-        return self.query('WAVeform:WIDTh?').lowe()
+        return self.query('WAVeform:WIDTh?').lower()
     
     # simple commands
+    def set_adc_resolution(self, bits):   
+        """
+            Set the number of bits used in data acquisition
+        """
+        if bits not in (8, 10):
+            raise RuntimeError(f'Input bits must be 8 or 10, not "{bits}"')
+        self.write(f'ACQuire:RESolution {bits}Bits')
+    
     def set_ch_coupling(self, ch, mode): 
         """
             Selects the coupling mode of the specified input channel.
@@ -419,11 +425,19 @@ class SDS5034(object):
         assert unit in ('V', 'A'), 'unit must be one of "V" or "A"'
         self.write(f'CHANnel{int(ch)}:UNIT {unit}')
 
+    def set_run_state(self, run=True):
+        """
+            Start/Stop taking data, equivalent to pressing the Run/Stop button on the front panel
+        """
+        if run: 
+            self.run()
+        else:
+            self.stop()
+
     def set_sequence(self, state): 
         """
             Enables or disables sequence acquisition mode.
 
-            ch:     int, channel number
             state:  bool, if true, sequence on
         """
         if state:
@@ -435,19 +449,27 @@ class SDS5034(object):
         """
             Sets the number of memory segments to
             acquire. The maximum number of segments may be limited
-            by the memory depth of your oscilloscope.
+            by the memory depth of your oscilloscope. Must be a power of 2. 
 
             value: int, count setting
         """
+        if value % 2 != 0: 
+            raise RuntimeError(f'Input {value} must be a power of 2')
+        
         self.write(f'ACQuire:SEQuence:COUNt {int(value)}')
         
     def set_smpl_rate(self, rate):
         """
             Sets the sampling rate when in the fixed sampling rate mode.
 
-            rate: float, rate in pts/sec
+            rate: float, rate in pts/sec or "auto"
         """
-        return self.write(f'ACQuire:SRATe {rate:g}')
+
+        if str(rate) in 'auto':
+            self.write('ACQuire:MMANagement AUTO')
+        else:
+            self.write('ACQuire:MMANagement FSRate')
+            self.write(f'ACQuire:SRATe {rate:g}')
     
     def set_time_delay(self, delay):
         """
@@ -457,7 +479,7 @@ class SDS5034(object):
 
             delay: float, delay in seconds
         """
-        self.write(f'TIMebas:DELay {delay:g}')
+        self.write(f'TIMebase:DELay {float(delay):E}')
 
     def set_time_scale(self, scale):
         """
@@ -468,7 +490,7 @@ class SDS5034(object):
 
             scale: seconds per division
         """
-        self.write(f'TIMebase:SCALe {scale:g}')
+        self.write(f'TIMebase:SCALe {scale:E}')
 
     def set_trig_mode(self, mode):
         """
