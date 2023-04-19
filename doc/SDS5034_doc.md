@@ -3,7 +3,6 @@ Module SDS5034
 
 See [here](https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf) for additional SCPI commands and documentation.
 
-
 Classes
 -------
 
@@ -37,11 +36,19 @@ Classes
 `default(self)`
 :   Resets the oscilloscope to the default configuration, equivalent to the Default button on the front panel
 
-`draw_wave(self, ch, ax=None)`
+`draw_wave(self, ch, ax=None, adjust_ylim=True, **plotargs)`
 :   Draw all read waveforms, as shown on scope screen
     
-    ch: int, channel id
-    ax: plt.Axes object for drawing, if none then make new
+    ch:         int, channel id
+    ax:         plt.Axes object for drawing, if none then make new
+    adjust_ylim:if True, change ylim to match scope
+    plotargs:   passed to ax.plot()
+
+`draw_wave_all(self, ax=None, **plotargs)`
+:   Draw all channels
+    
+    ax:         plt.Axes object for drawing, if none then make new
+    plotargs:   passed to ax.plot()
 
 `flush(self)`
 :   Flush connection buffer
@@ -53,9 +60,7 @@ Classes
 :   Returns the coupling mode of the specified channel.
 
 `get_ch_impedance(self, ch)`
-:   Returns the current impedance setting of the selected channel.
-    ONEMeg means 1 Mohm.
-    FIFTy means 50 ohm.
+:   Returns the current impedance setting of the selected channel in Ohms.
 
 `get_ch_offset(self, ch)`
 :   Returns the offset value of the specified channel (volts).
@@ -63,20 +68,23 @@ Classes
 `get_ch_probe(self, ch)`
 :   Returns the current probe attenuation factor for the selected channel.
 
+`get_ch_scale(self, ch)`
+:   Returns the current vertical sensitivity of the specified channel (volts/div).
+
 `get_ch_state(self, ch)`
-:   Returns current status of the selected channel (ON/OFF).
+:   Returns current status of the selected channel (ON/OFF). Return True if on.
 
 `get_ch_unit(self, ch)`
 :   Returns the current unit of the concerned channel.
 
-`get_ch_vscale(self, ch)`
-:   Returns the current vertical sensitivity of the specified channel (volts/div).
-
 `get_id(self)`
 :   Returns identification string of device.
 
+`get_run_state(self)`
+:   Get RUN/STOP state. Return True if running.
+
 `get_sequence(self)`
-:   Returns whether the current sequence acquisition switch is on or not (ON/OFF).
+:   Returns whether the current sequence acquisition switch is on or not (True if ON).
 
 `get_sequence_count(self)`
 :   Returns the current count setting: number of memory segments to acquire. 
@@ -197,6 +205,9 @@ Classes
 `run(self)`
 :   Start taking data, equivalent to pressing the Run button on the front panel
 
+`set_adc_resolution(self, bits)`
+:   Set the number of bits used in data acquisition
+
 `set_ch_coupling(self, ch, mode)`
 :   Selects the coupling mode of the specified input channel.
     
@@ -229,6 +240,14 @@ Classes
     ch:          int, channel number
     attenuation: if none, set to default (1X); else should be a float
 
+`set_ch_scale(self, ch, scale)`
+:   Sets the vertical sensitivity in Volts/div. If the
+    probe attenuation is changed, the scale value is multiplied by
+    the probe's attenuation factor.
+    
+    ch:     int, channel number
+    scale:  float, vertical scaling
+
 `set_ch_state(self, ch, on=True)`
 :   Turns the display of the specified channel on or off.
     
@@ -242,31 +261,25 @@ Classes
     ch:     int, channel number
     unit:   str, one of V or A for volts or amps
 
-`set_ch_vscale(self, ch, scale)`
-:   Sets the vertical sensitivity in Volts/div. If the
-    probe attenuation is changed, the scale value is multiplied by
-    the probe's attenuation factor.
-    
-    ch:     int, channel number
-    scale:  float, vertical scaling
+`set_run_state(self, run=True)`
+:   Start/Stop taking data, equivalent to pressing the Run/Stop button on the front panel
 
 `set_sequence(self, state)`
 :   Enables or disables sequence acquisition mode.
     
-    ch:     int, channel number
     state:  bool, if true, sequence on
 
 `set_sequence_count(self, value)`
 :   Sets the number of memory segments to
     acquire. The maximum number of segments may be limited
-    by the memory depth of your oscilloscope.
+    by the memory depth of your oscilloscope. Must be a power of 2. 
     
     value: int, count setting
 
 `set_smpl_rate(self, rate)`
 :   Sets the sampling rate when in the fixed sampling rate mode.
     
-    rate: float, rate in pts/sec
+    rate: float, rate in pts/sec or "auto"
 
 `set_time_delay(self, delay)`
 :   Specifies the main timebase delay. This delay

@@ -19,6 +19,8 @@ Import as
 import SiglentDevices
 ```
 
+Run functionality tests with `pytest`
+
 ### Example Digital Oscilloscpe SDS5034
 
 ```python
