@@ -1,9 +1,9 @@
 # SiglentDevices
 API for interfacing with various Siglent devices using SCPI commands
 
-See [API Index](docs/README.md). Dev note: regenerate with [`handsdown`](https://github.com/vemel/handsdown)
+## Usage
 
-## Install and import
+### Install and import
 
 To "install" clone this directory onto your PYTHONPATH. 
 
@@ -21,7 +21,7 @@ import SiglentDevices
 
 Run functionality tests with `pytest`
 
-## Example Digital Oscilloscpe SDS5034
+### Example Digital Oscilloscpe SDS5034
 
 ```python
 from SiglentDevices import SDS5034
@@ -39,3 +39,13 @@ sds.stop()
 # read waveform ch1
 volts = sds.read_wave_ch(1)
 ```
+---
+
+## Device List
+
+* [Digital Oscilloscpe SDS5034](docs/src/SDS5034.md)
+
+
+## Developer Notes
+    
+* Regenerate documentation with [`handsdown`](https://github.com/vemel/handsdown). Replace all `()` with nothing to fix markdown links
