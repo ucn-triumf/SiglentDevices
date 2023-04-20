@@ -3,11 +3,11 @@
     Derek Fujimoto
     March 2023
 
-    See manual for SCPI command list and other examples: 
+    See manual for SCPI command list and other examples:
         https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
 """
 
-import numpy as np 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import pyvisa, struct, math
@@ -29,10 +29,10 @@ class SDS5034(object):
 
     ADDRESS = 'TCPIP::{host}::INSTR'
     HORI_NUM = 10
-    
+
     # see table 2 from https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
     # page 559
-    
+
     TDIV_ENUM = (   200e-12,
                     500e-12,
                     1e-9,
@@ -76,7 +76,7 @@ class SDS5034(object):
 
     def __init__(self, hostname='tucan-scope1.triumf.ca'):
         """ Init.
-        
+
         Args:
             hostname (str): ip address or DNC lookup of device
         """
@@ -85,11 +85,11 @@ class SDS5034(object):
         rm = pyvisa.ResourceManager()
         self.sds = rm.open_resource(self.ADDRESS.format(host=hostname))
 
-        # setup connection 
+        # setup connection
         self.sds.read_termination = '\n'
         self.sds.write_termination = '\n'
 
-        # set chunk size for communication 
+        # set chunk size for communication
         self.sds.chunk_size = 20*1024*1024
 
         # set data storage
@@ -97,7 +97,7 @@ class SDS5034(object):
         self.waveforms = pd.DataFrame()
 
     # useful read and write passing to pyvisa.resources.TCPIPInstrument class
-    def close(self):                        
+    def close(self):
         """Close remote connection."""
         self.sds.close()
 
@@ -105,39 +105,39 @@ class SDS5034(object):
         """Flush connection buffer."""
         self.sds.flush()
 
-    def read(self, *args, **kwargs):        
+    def read(self, *args, **kwargs):
         """Read from stream."""
         return self.sds.read(*args, **kwargs)
-    
-    def read_raw(self, *args, **kwargs):    
+
+    def read_raw(self, *args, **kwargs):
         """Read raw data from stream.
 
         Arguments passed to pyvisa.TCPIPInstrument.read_raw
         """
         return self.sds.read_raw(*args, **kwargs)
-    
-    def read_bytes(self, *args, **kwargs):  
+
+    def read_bytes(self, *args, **kwargs):
         """Read raw bytes from stream.
 
         Arguments passed to pyvisa.TCPIPInstrument.read_bytes
         """
         return self.sds.read_bytes(*args, **kwargs)
-    
-    def query(self, *args, **kwargs):       
+
+    def query(self, *args, **kwargs):
         """Push query to device, read back response.
 
         Arguments passed to pyvisa.TCPIPInstrument.query
         """
         return self.sds.query(*args, **kwargs)
-    
-    def write(self, *args, **kwargs):       
+
+    def write(self, *args, **kwargs):
         """Write string to device.
 
         Arguments passed to pyvisa.TCPIPInstrument.write
         """
         return self.sds.write(*args, **kwargs)
-    
-    def write_raw(self, *args, **kwargs):   
+
+    def write_raw(self, *args, **kwargs):
         """Write raw bytestring to device.
 
         Arguments passed to pyvisa.TCPIPInstrument.write_raw
@@ -145,42 +145,42 @@ class SDS5034(object):
         return self.sds.write_raw(*args, **kwargs)
 
     # simple basic commands
-    def default(self):      
+    def default(self):
         """Resets the oscilloscope to the default configuration, equivalent to the Default button on the front panel.
         """
         self.write('*RST')
 
-    def reboot(self):       
+    def reboot(self):
         """Restart the scope."""
         self.write('SYSTem:REBoot')
-    
-    def run(self):          
+
+    def run(self):
         """Start taking data, equivalent to pressing the Run button on the front panel."""
         self.write('ACQuire:STATE RUN')
-    
-    def stop(self):         
+
+    def stop(self):
         """Stop taking data, equivalent to pressing the Stop button on the front panel."""
         self.write('ACQuire:STATE STOP')
 
     # simple queries
-    
-    def get_adc_resolution(self):   
+
+    def get_adc_resolution(self):
         """Returns:
             int: number of bits 8|10
         """
         return int(self.query('ACQuire:RESolution?').replace('Bits', ''))
-    
-    def get_ch_coupling(self, ch:int):  
-        """Args: 
+
+    def get_ch_coupling(self, ch:int):
+        """Args:
             ch (int): channel number
 
         Returns:
             str: DC|AC|GND
         """
         return self.query(f'CHANnel{int(ch)}:COUPling?')
-    
-    def get_ch_impedance(self, ch:int): 
-        """Args: 
+
+    def get_ch_impedance(self, ch:int):
+        """Args:
             ch (int): channel number
 
         Returns:
@@ -189,94 +189,94 @@ class SDS5034(object):
 
         response = self.query(f'CHANnel{int(ch)}:IMP?').strip()
 
-        if response == 'ONEMeg': 
+        if response == 'ONEMeg':
             return '1M'
-        elif response == 'FIFTy': 
+        elif response == 'FIFTy':
             return '50'
-        else: 
+        else:
             raise RuntimeError(f'Unexpected device response "{response}"')
-    
-    def get_ch_offset(self, ch:int):    
-        """Args: 
+
+    def get_ch_offset(self, ch:int):
+        """Args:
                 ch (int): channel number
 
             Returns:
-                float: Offset in volts 
+                float: Offset in volts
         """
         return float(self.query(f'CHANnel{int(ch)}:OFFS?').strip())
-    
-    def get_ch_probe(self, ch:int):     
-        """Args: 
+
+    def get_ch_probe(self, ch:int):
+        """Args:
                 ch (int): channel number
 
             Returns:
                 float: probe attenuation factor
         """
         return float(self.query(f'CHANnel{int(ch)}:PROBe?').strip())
-    
-    def get_ch_scale(self, ch:int):    
+
+    def get_ch_scale(self, ch:int):
         """
             Returns the current vertical sensitivity of the specified channel (volts/div).
 
-            Args: 
+            Args:
                 ch (int): channel number
-            
+
             Returns:
                 float: vertical sensitivity in volts/div
         """
         return float(self.query(f'CHANnel{int(ch)}:SCALe?').strip())
-    
-    def get_ch_state(self, ch:int):     
+
+    def get_ch_state(self, ch:int):
         """Args:
                 ch (int): channel number
-            
+
             Returns:
                 bool: True if channel is on. False if channel is off
         """
         state = self.query(f'CHANnel{int(ch)}:SWITch?')
 
         return state.strip().upper() == 'ON'
-    
+
     def get_ch_unit(self, ch:int):
         """Args:
                 ch (int): channel number
-            
+
             Returns:
                 str: the unit of the channel V|A
         """
         return self.query(f'CHANnel{int(ch)}:UNIT?')
-    
-    def get_id(self):               
+
+    def get_id(self):
         """Returns:
                 str: id of device
         """
         return self.query('*IDN?')
-    
+
     def get_run_state(self):
         """Returns:
                 bool: True if run. False if Stop
         """
         return bool(int(self.query('ACQ:STATE?')))
-        
-    def get_sequence(self):         
+
+    def get_sequence(self):
         """Returns:
                 bool: True if ON, False if OFF
         """
         return self.query('ACQuire:SEQuence?') == 'ON'
-    
-    def get_sequence_count(self):   
+
+    def get_sequence_count(self):
         """
-            Returns the current count setting: number of memory segments to acquire. 
-            
+            Returns the current count setting: number of memory segments to acquire.
+
             The maximum number of segments may be limited by the memory depth of your oscilloscope.
 
             Returns:
                 int: number of counts, is a power of 2
         """
         return int(self.query('ACQuire:SEQuence:COUNt?').strip())
-    
-    def get_smpl_rate(self):        
-        """Returns: 
+
+    def get_smpl_rate(self):
+        """Returns:
                 float: sampling rate for fixed sampling rate mode
         """
         return float(self.query('ACQuire:SRATe?').strip())
@@ -287,62 +287,62 @@ class SDS5034(object):
         """
         return float(self.query('TIMebase:DELay?').strip())
 
-    def get_time_scale(self):       
+    def get_time_scale(self):
         """Returns:
                 float: horizontal scale in seconds/div
         """
         return float(self.query('TIMebase:SCALe?').strip())
-    
-    def get_trig_mode(self):        
+
+    def get_trig_mode(self):
         """Returns:
             str: trigger mode (auto|normal|single)
         """
         return self.query('TRIGger:MODE?').lower()
-    
-    def get_trig_state(self):       
+
+    def get_trig_state(self):
         """Returns:
             str: trigger state (Arm|Ready|Auto|Trig'd|Stop|Roll).
         """
         return self.query('TRIGger:STATus?')
-    
-    def get_wave_ch(self):          
+
+    def get_wave_ch(self):
         """Returns:
             int: channel number corresponding to waveform to be transferred from the oscilloscope
         """
         return int(self.query('WAVeform:SOURce?')[1])
-    
-    def get_wave_startpt(self):     
+
+    def get_wave_startpt(self):
         """Returns:
             int: the starting index of the data for waveform transfer.
         """
         return int(self.query('WAVeform:STARt?').strip())
-    
-    def get_wave_interval(self):    
+
+    def get_wave_interval(self):
         """Returns:
             int: the interval between data points for waveform transfer.
         """
         return int(self.query('WAVeform:INTerval?'))
-    
-    def get_wave_npts(self):        
+
+    def get_wave_npts(self):
         """Returns:
             float: the number of waveform points to be transferred
         """
         return float(self.query('WAVeform:POINt?').strip())
-    
-    def get_wave_maxpt(self):       
+
+    def get_wave_maxpt(self):
         """Returns:
             float: the maximum points of one piece, when it needs to read the waveform data in pieces.
         """
         return float(self.query('WAVeform:MAXPoint?').strip())
-    
-    def get_wave_width(self):       
+
+    def get_wave_width(self):
         """Returns:
             str: output format for the transfer of waveform data (byte|word).
         """
         return self.query('WAVeform:WIDTh?').lower()
-    
+
     # simple commands
-    def set_adc_resolution(self, bits:int):   
+    def set_adc_resolution(self, bits:int):
         """Set the number of bits used in data acquisition
 
         Args:
@@ -351,26 +351,26 @@ class SDS5034(object):
         if bits not in (8, 10):
             raise RuntimeError(f'Input bits must be 8 or 10, not "{bits}"')
         self.write(f'ACQuire:RESolution {bits}Bits')
-    
-    def set_ch_coupling(self, ch:int, mode:str): 
+
+    def set_ch_coupling(self, ch:int, mode:str):
         """Selects the coupling mode of the specified input channel.
 
         Args:
             ch (int): channel number
             mode (str): DC|AC|GND
-        """ 
+        """
         mode = mode.upper()
         assert mode in ('DC', 'AC', 'GND'), 'mode must be one of DC, AC, or GND'
         self.write(f'CHANnel{int(ch)}:COUPling {mode}')
-    
-    def set_ch_impedance(self, ch:int, z:str): 
-        """Sets the input impedance of the selected channel. 
+
+    def set_ch_impedance(self, ch:int, z:str):
+        """Sets the input impedance of the selected channel.
             There are two impedance values available. They are 1M and 50.
 
         Args:
             ch (int): channel number
             z (str):  1M|50
-        """ 
+        """
         z = str(z).upper()
 
         if z == '1M':
@@ -381,22 +381,22 @@ class SDS5034(object):
             raise RuntimeError('z must be one of "1M" or "50"')
 
     def set_ch_offset(self, ch:int, offset:float):
-        """Set vertical offset of the channel. 
-        
+        """Set vertical offset of the channel.
+
             The maximum ranges depend on the fixed sensitivity setting.
-            The range of legal values varies with the value set by self.set_ch_vscale 
+            The range of legal values varies with the value set by self.set_ch_vscale
 
         Args:
             ch (int): channel number
             offset (float): offset value in volts
         """
         return self.write(f'CHANnel{int(ch)}:OFFSet {offset:g}')
-    
-    def set_ch_probe(self, ch:int, attenuation=None):
-        """Specifies the probe attenuation factor for the selected channel. 
 
-            This command does not change the actual input sensitivity of the oscilloscope. 
-            It changes the reference constants for scaling the  display factors, for making 
+    def set_ch_probe(self, ch:int, attenuation=None):
+        """Specifies the probe attenuation factor for the selected channel.
+
+            This command does not change the actual input sensitivity of the oscilloscope.
+            It changes the reference constants for scaling the  display factors, for making
             automatic measurements, and for setting trigger levels.
 
         Args:
@@ -408,13 +408,13 @@ class SDS5034(object):
         else:
             assert 1e-6 < attenuation < 1e6, 'Attenuation out of bounds: (1e-6, 1e6)'
             self.write(f'CHANnel{int(ch)}:PROBe VALue {attenuation:g}')
-    
+
     def set_ch_scale(self, ch:int, scale:float):
-        """Sets the vertical sensitivity in Volts/div. 
-            
-            If the probe attenuation is changed, the scale value is multiplied by the probe's 
+        """Sets the vertical sensitivity in Volts/div.
+
+            If the probe attenuation is changed, the scale value is multiplied by the probe's
             attenuation factor.
-            
+
         Args:
             ch (int): channel number
             scale (float): vertical scaling
@@ -430,9 +430,9 @@ class SDS5034(object):
         """
         state = 'ON' if on else 'OFF'
         self.write(f'CHANnel{int(ch)}:SWITch {state}')
-        
+
     def set_ch_unit(self, ch:int, unit:str):
-        """Changes the unit of input signal of specified channel: voltage (V) or current (A) 
+        """Changes the unit of input signal of specified channel: voltage (V) or current (A)
 
         Args:
             ch (int): channel number
@@ -448,35 +448,35 @@ class SDS5034(object):
         Args:
             run (bool): if True, RUN. If False, STOP
         """
-        if run: 
+        if run:
             self.run()
         else:
             self.stop()
 
-    def set_sequence(self, state:bool): 
+    def set_sequence(self, state:bool):
         """Enables or disables sequence acquisition mode.
 
         Args:
-            state (bool): If True, sequence on. If False, sequence off. 
+            state (bool): If True, sequence on. If False, sequence off.
         """
         if state:
             self.write('ACQuire:SEQuence ON')
         else:
             self.write('ACQuire:SEQuence OFF')
 
-    def set_sequence_count(self, value:int): 
-        """Sets the number of memory segments to acquire. 
-        
-        The maximum number of segments may be limited by the memory depth of your oscilloscope. 
+    def set_sequence_count(self, value:int):
+        """Sets the number of memory segments to acquire.
+
+        The maximum number of segments may be limited by the memory depth of your oscilloscope.
 
         Args:
             value (int): count setting, must be a power of two
         """
-        if value % 2 != 0: 
+        if value % 2 != 0:
             raise RuntimeError(f'Input {value} must be a power of 2')
-        
+
         self.write(f'ACQuire:SEQuence:COUNt {int(value)}')
-        
+
     def set_smpl_rate(self, rate):
         """Sets the sampling rate when in the fixed sampling rate mode.
 
@@ -489,10 +489,10 @@ class SDS5034(object):
         else:
             self.write('ACQuire:MMANagement FSRate')
             self.write(f'ACQuire:SRATe {rate:g}')
-    
+
     def set_time_delay(self, delay:float):
-        """Specifies the main timebase delay. 
-        
+        """Specifies the main timebase delay.
+
             This delay is the time between the trigger event and the delay reference
             point on the screen
 
@@ -534,7 +534,7 @@ class SDS5034(object):
 
         Args:
             state (str): RUN|STOP
-        """     
+        """
         if state.upper() in 'RUN':
             self.write('TRIGger:RUN')
         elif state.upper() in 'STOP':
@@ -543,26 +543,26 @@ class SDS5034(object):
             raise RuntimeError('Bad state input, should be one of RUN or STOP')
 
     def set_wave_ch(self, ch:int):
-        """Specifies the source waveform to be transferred from the oscilloscope 
+        """Specifies the source waveform to be transferred from the oscilloscope
 
         Args:
             ch (int): channel number
         """
         self.write(f'WAVeform:SOURce C{int(ch)}')
-    
+
     def set_wave_startpt(self, pt:int):
         """Args:
-            pt (int): index of starting data point for waveform transfer 
+            pt (int): index of starting data point for waveform transfer
         """
         self.write(f'WAVeform:STARt {int(pt)}')
-    
+
     def set_wave_interval(self, interval:int):
         """Args:
             interval (int): interval between data points for waveform transfer
         """
         self.write(f'WAVeform:INTerval {int(interval)}')
 
-    def set_wave_npts(self, npts):        
+    def set_wave_npts(self, npts):
         """Args:
             npts (int): number of waveform points to be transferred
         """
@@ -570,7 +570,7 @@ class SDS5034(object):
 
     def set_wave_width(self, format:str):
         """Sets the current output format for the transfer of waveform data.
-        
+
         Args:
             format (str): byte|word
         """
@@ -592,41 +592,41 @@ class SDS5034(object):
                 adc_bit:        number of bytes in adc
                 bandwidth:      bandwidth limit. OFF, 20M, 200M
                 channel:        wave source id
-                code_per_div:   the value is different for different vertical gain of different 
+                code_per_div:   the value is different for different vertical gain of different
                                 models
                 coupling:       vertical coupling. DC, AC, GND
                 comm_type:      chosen by remote command comm_format
                 comm_order:     chosen by remote command comm_format
-                data_bytes:     length in bytes of 1st simple data array. In transmitted 
-                                waveform, represent the number of transmitted bytes in accordance 
-                                with the parameter of the :WAVeform:POINt remote command and the 
+                data_bytes:     length in bytes of 1st simple data array. In transmitted
+                                waveform, represent the number of transmitted bytes in accordance
+                                with the parameter of the :WAVeform:POINt remote command and the
                                 used format (see comm_type). Only for analog channels.
-                data_first_pt:  indicates the offset relative to the beginning of the trace buffer. 
-                                Value is the same as the parameter of the :WAVeform:STARt remote 
+                data_first_pt:  indicates the offset relative to the beginning of the trace buffer.
+                                Value is the same as the parameter of the :WAVeform:STARt remote
                                 command.
-                data_interval:  indicates the interval between data points for waveform transfer. 
-                                Value is the same as the parameter of the :WAVeform:INTerval remote 
+                data_interval:  indicates the interval between data points for waveform transfer.
+                                Value is the same as the parameter of the :WAVeform:INTerval remote
                                 command.
-                data_npts:      number of data points in the data array. Only for analog channels. 
-                                When sequence is on, this value means the points number of single 
+                data_npts:      number of data points in the data array. Only for analog channels.
+                                When sequence is on, this value means the points number of single
                                 sequence frame.
-                descriptor:     descriptor name. It is string, the first 8 chars are always 
+                descriptor:     descriptor name. It is string, the first 8 chars are always
                                 “WAVEDESC”
-                fixed_v_gain:   Fixed vertical gain. This is the enumerated vertical scale. 
+                fixed_v_gain:   Fixed vertical gain. This is the enumerated vertical scale.
                                 This value is not intuitive, and the vertical scale is usually
                                 represented by the value of address 156~159
-                frame_index:    the specified frame index of sequence set by the parameter 
+                frame_index:    the specified frame index of sequence set by the parameter
                                 <value1> of the command :WAVeform:SEQuence. Default Value is 1
                 instrum_name:   string, always “Siglent SDS”.
                 probe_atten:    probe attenuation factor
-                read_frames:    number of sequence frames transferred this time. Used to calculate 
+                read_frames:    number of sequence frames transferred this time. Used to calculate
                                 the reading times of sequence waveform
                 sample_interval:horizontal interval. Sampling interval for time domain waveforms.
                                 Horizontal interval = 1/sampling rate
-                sum_frames:     number of sequence frames acquired. Used to calculate the reading 
+                sum_frames:     number of sequence frames acquired. Used to calculate the reading
                                 times of sequence waveform
-                t_delay_s:      horizontal offset. Trigger offset for the first sweep of the    
-                                trigger, seconds between the trigger and the first data point. 
+                t_delay_s:      horizontal offset. Trigger offset for the first sweep of the
+                                trigger, seconds between the trigger and the first data point.
                                 Unit is s.
                 t_per_div:      time_base. This is the enumerated time/div.
                 template:       template name. It is string, the first 7 chars are always “WAVEACE”.
@@ -686,7 +686,7 @@ class SDS5034(object):
         # analog channel. When sequence is on, this value means the points
         # number of single sequence frame.
         preamble['data_npts'] = struct.unpack('i', recv[116:120])[0]
-        
+
         # First point. Indicates the offset relative to the beginning of the trace
         # buffer. Value is the same as the parameter of
         # the :WAVeform:STARt remote command.
@@ -707,7 +707,7 @@ class SDS5034(object):
 
         # Vertical gain. The value of vertical scale without probe attenuation.
         preamble['v_per_div_raw'] = struct.unpack('f', recv[156:160])[0]
-        
+
         # Vertical offset. The value of vertical offset without probe attenuation
         preamble['v_offset_raw'] = struct.unpack('f', recv[160:164])[0]
 
@@ -720,10 +720,10 @@ class SDS5034(object):
         # Adc_bit
         preamble['adc_bit'] = struct.unpack('h', recv[172:174])[0]
 
-        # The specified frame index of sequence set by the parameter 
+        # The specified frame index of sequence set by the parameter
         # <value1> of the command :WAVeform:SEQuence. Default Value is 1
         preamble['frame_index'] = struct.unpack('h', recv[174:176])[0]
-        
+
         # Horizontal interval. Sampling interval for time domain waveforms.
         # Horizontal interval = 1/sampling rate
         preamble['sample_interval'] = struct.unpack('f', recv[176:180])[0]
@@ -731,7 +731,7 @@ class SDS5034(object):
         # Horizontal offset. Trigger offset for the first sweep of the trigger,
         # seconds between the trigger and the first data point. Unit is s.
         preamble['t_delay_s'] = struct.unpack('d', recv[180:188])[0]
-        
+
         # Time_base. This is the enumerated time/div.
         preamble['t_per_div'] = self.TDIV_ENUM[struct.unpack('h', recv[324:326])[0]]
 
@@ -741,7 +741,7 @@ class SDS5034(object):
 
         # Probe attenuation.
         preamble['probe_atten'] = struct.unpack('f', recv[328:332])[0]
-        
+
         # Fixed vertical gain. This is the enumerated vertical scale. This value
         # is not intuitive, and the vertical scale is usually represented by the
         # value of address 156~159
@@ -750,7 +750,7 @@ class SDS5034(object):
         # Bandwidth limit. 0-OFF,1-20M,2-200M
         options = ['OFF', '20M', '200M']
         preamble['bandwidth'] = options[struct.unpack('h', recv[334:336])[0]]
-        
+
         # Wave source. 0-C1,1-C2,2-C3,3-C4
         # Normal command doesn't work?
         # preamble['channel'] = f"C{struct.unpack('h', recv[344:346])[0]}"
@@ -771,12 +771,15 @@ class SDS5034(object):
         Args:
             ch (int): channel number
             start_pt (int): index of starting point
+
+        Returns:
+            pd.DataFrame: voltages of single channel, indexed by timestamp
         """
 
         # setup input
         self.set_wave_startpt(start_pt)
         self.set_wave_ch(ch)
-        
+
         # set number of points to read from
         points = self.get_wave_npts()
         one_piece_num = self.get_wave_maxpt()
@@ -794,7 +797,7 @@ class SDS5034(object):
         if nbits > 8:
             self.set_wave_width('WORD')
 
-        # read waveform data? 
+        # read waveform data?
         read_times = math.ceil(points/one_piece_num)
         recv_all = []
         for i in range(0, read_times):
@@ -813,20 +816,20 @@ class SDS5034(object):
                 convert_data.append(data)
         else:
             convert_data = recv_all
-        
+
         # convert ints to volts
         volt_value = []
         for data in convert_data:
-            
+
             # 12bit-2047, 8bit-127
             if data > pow(2,nbits-1)-1:
                 data = data - pow(2,nbits)
             else:
                 pass
             volt_value.append(data)
-        
+
         volt_value = np.array(volt_value)
-        
+
         # read waveform preamble
         preamble = self.get_wave_preamble()
         code = preamble['code_per_div']
@@ -842,7 +845,7 @@ class SDS5034(object):
         # get times
         idx = np.arange(len(volt_value))
         time_value = -delay - (tdiv * self.HORI_NUM / 2) + idx * interval
-        
+
         # make data frame for output
         df = pd.DataFrame({f'C{ch}':volt_value, 'time_s':time_value})
         df.set_index('time_s', inplace=True)
@@ -858,10 +861,13 @@ class SDS5034(object):
 
         Args:
             start_pt (int): index of starting point to read
+
+        Returns:
+            pd.DataFrame: voltages of all active channels, indexed by timestamp
         """
 
         # stop run state
-        
+
         self.stop()
 
         # iterate over all possible channels
@@ -879,12 +885,12 @@ class SDS5034(object):
         self.waveforms = pd.concat((self.waveforms, df), axis='columns')
 
         return df
-                
+
     def draw_wave(self, ch:int, ax=None, adjust_ylim:bool=True, **plotargs):
         """Draw waveform for single channel, as shown on scope screen
 
             Must read the waveform first
-        
+
         Args:
             ch (int): channel number
             ax (plt.Axes|None): object to draw in, if none then make new figure
@@ -893,7 +899,7 @@ class SDS5034(object):
         """
 
         # set axes
-        if ax is None: 
+        if ax is None:
             plt.figure()
             ax = plt.gca()
 
@@ -915,7 +921,7 @@ class SDS5034(object):
         """Draw all read waveforms, as shown on scope screen
 
             Must read the waveform first
-        
+
         Args:
             ax (plt.Axes|None): object to draw in, if none then make new figure
             plotargs: passed to ax.plot()
