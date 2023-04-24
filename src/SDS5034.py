@@ -7,7 +7,7 @@
         https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
 """
 
-from SiglentBase import SiglentBase
+from SiglentDevices import SiglentBase
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -89,7 +89,6 @@ class SDS5034(SiglentBase):
         # set data storage
         self.preambles = {}
         self.waveforms = pd.DataFrame()
-
 
     # simple basic commands
     def default(self):
