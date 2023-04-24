@@ -5,12 +5,13 @@ API for interfacing with various Siglent devices using SCPI commands
 
 ### Install and import
 
-To "install" clone this directory onto your PYTHONPATH. 
+To "install" clone this directory onto your PYTHONPATH.
 
-Dependencies: 
+Dependencies:
 
 * `matplotlib`
 * `pyvisa`
+* `pyvisa-py`
 * `numpy`
 
 Import as
@@ -43,9 +44,11 @@ volts = sds.read_wave_ch(1)
 
 ## Device List
 
+* [Siglent Device Base Class](docs/src/SiglenBase.md)
 * [Digital Oscilloscpe SDS5034](docs/src/SDS5034.md)
+* [Programmable DC Power Supply SPD3303](docs/src/SPD3303.md)
 
 
 ## Developer Notes
-    
+
 * Regenerate documentation with [`handsdown`](https://github.com/vemel/handsdown). Replace all `()` with nothing to fix markdown links

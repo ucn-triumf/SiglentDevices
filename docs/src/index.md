@@ -11,3 +11,5 @@ Src
 ## Modules
 
 - [Sds5034](./SDS5034.md)
+- [Spd3303](./SPD3303.md)
+- [Siglentbase](./SiglentBase.md)
