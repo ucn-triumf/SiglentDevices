@@ -188,7 +188,7 @@ class SPD3303(SiglentBase):
         """
         self.write(f'CH{int(ch)}:CURRent {float(value)}')
 
-    def set_timer(ch, on=True):
+    def set_timer(self, ch, on=True):
         """Set timer function of channel on/off.
 
         Args:
