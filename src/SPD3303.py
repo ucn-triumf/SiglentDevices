@@ -49,11 +49,14 @@ class SPD3303(SiglentBase):
         """
 
         if ch is None:
-            val = self.query('MEASure: CURRent?')
+            val = self.query('MEASure:CURRent?')
         else:
-            val = self.query(f'MEASure: CURRent? CH{int(ch)}')
+            val = self.query(f'MEASure:CURRent? CH{int(ch)}')
 
-        return float(val.strip())
+        try:
+            return float(val.strip())
+        except ValueError:
+            return 0
 
     def get_id(self):
         """Get ID of device
@@ -75,39 +78,23 @@ class SPD3303(SiglentBase):
         """
 
         if ch is None:
-            val = self.query('MEASure: POWEr?')
+            val = self.query('MEASure:POWEr?')
         else:
-            val = self.query(f'MEASure: POWEr? CH{int(ch)}')
+            val = self.query(f'MEASure:POWEr? CH{int(ch)}')
 
         return float(val.strip())
 
-    def get_timer_par(self, ch, group=None):
+    def get_timer_par(self, ch, group):
         """Get timing parameters of specified channel
 
-            Either ch or group should be int, both should not be none
-
         Args:
-            ch (int): channel number, if None don't get channel
-            group (int): 1|2|3|4|5, if None, don't get group
+            ch (int): channel number
+            group (int): 1|2|3|4|5, step in the timing sequence
 
         Returns:
             dict: values keyed by units
         """
-
-        # set group string
-        if group is None:
-            group = ''
-        else:
-            group = f'{int(group)}'
-
-        # set channel string
-        if ch is None:
-            ch = ''
-        else:
-            ch = f'CH{int(ch)}'
-
-        # write message
-        val = self.query('TIMEr:SET? ' + ','.join((ch, group)))
+        val = self.query(f'TIMEr:SET? CH{int(ch)},{int(group)}')
 
         # format output
         return {key : float(val) for key, val in zip(('volt', 'amp', 'sec'), val.split(','))}
@@ -124,9 +111,9 @@ class SPD3303(SiglentBase):
         """
 
         if ch is None:
-            val = self.query('MEASure: VOLTage?')
+            val = self.query('MEASure:VOLTage?')
         else:
-            val = self.query(f'MEASure: VOLTage? CH{int(ch)}')
+            val = self.query(f'MEASure:VOLTage? CH{int(ch)}')
 
         return float(val.strip())
 
@@ -198,33 +185,19 @@ class SPD3303(SiglentBase):
         val = 'ON' if on else 'OFF'
         self.write(f'TIMEr CH{int(ch)},{val}')
 
-    def set_timer_par(self, ch, volt, amp, sec, group=None):
+    def set_timer_par(self, ch, group, volt, amp, sec):
         """Set timing parameters of specified channel
 
             Either ch or group should be int, both should not be none
 
         Args:
-            ch (int): channel number, if None don't set channel
+            ch (int): channel number
+            group (int): 1|2|3|4|5, step in the timing sequence
             volt (float): voltage in volts
             amp (float): current in amps
             sec (float): time in seconds
-            group (int): 1|2|3|4|5, if None, don't set group
         """
-
-        # set group string
-        if group is None:
-            group = ''
-        else:
-            group = f'{int(group)},'
-
-        # set channel string
-        if ch is None:
-            ch = ''
-        else:
-            ch = f'CH{int(ch)},'
-
-        # write message
-        self.write(f'TIMEr:SET {ch}{group}{volt},{amp},{sec}')
+        self.write(f'TIMEr:SET CH{int(ch)},{int(group)},{volt},{amp},{sec}')
 
     def set_voltage(self, ch, value):
         """Set voltage value of selected channel
