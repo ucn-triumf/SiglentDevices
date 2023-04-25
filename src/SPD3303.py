@@ -74,7 +74,7 @@ class SPD3303(SiglentBase):
             ch (int): channel number. If None, query current channel (id with get_ch())
 
         Returns:
-            float: Power in VA
+            float: Power in Watts
         """
 
         if ch is None:
