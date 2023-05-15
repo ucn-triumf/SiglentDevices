@@ -47,6 +47,7 @@ volts = sds.read_wave_ch(1)
 * [Siglent Device Base Class](docs/src/SiglenBase.md)
 * [Digital Oscilloscpe SDS5034](docs/src/SDS5034.md)
 * [Programmable DC Power Supply SPD3303](docs/src/SPD3303.md)
+* [RIGOL Arbitrary Waveform Generator DG1032Z](docs/src/RIGOL_DG1032Z.md)
 
 
 ## Developer Notes
