@@ -296,7 +296,7 @@ class SDS5034(SiglentBase):
         """
         if bits not in (8, 10):
             raise RuntimeError(f'Input bits must be 8 or 10, not "{bits}"')
-        self.write(f'ACQuire:RESolution {bits}Bits')
+        self.write(f'ACQuire:RESolution {bits}B')
 
     def set_ch_coupling(self, ch, mode):
         """Selects the coupling mode of the specified input channel.
