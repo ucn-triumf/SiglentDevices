@@ -296,7 +296,12 @@ class SDS5034(SiglentBase):
         """
         if bits not in (8, 10):
             raise RuntimeError(f'Input bits must be 8 or 10, not "{bits}"')
+
+        state = self.get_run_state()
+        self.run()
         self.write(f'ACQuire:RESolution {bits}B')
+        if not state:
+            self.stop()
 
     def set_ch_coupling(self, ch, mode):
         """Selects the coupling mode of the specified input channel.
@@ -742,6 +747,8 @@ class SDS5034(SiglentBase):
         nbits = self.get_adc_resolution()
         if nbits > 8:
             self.set_wave_width('WORD')
+        else:
+            self.set_wave_width('BYTE')
 
         # read waveform data?
         read_times = math.ceil(points/one_piece_num)
@@ -756,6 +763,7 @@ class SDS5034(SiglentBase):
 
         # convert bits to float
         if nbits > 8:
+            convert_data = []
             for i in range(0, int(len(recv_all) / 2)):
                 data_16bit = recv_all[2 * i + 1] * 256 + recv_all[2 * i]
                 data = data_16bit >> (16-nbits)
@@ -768,13 +776,16 @@ class SDS5034(SiglentBase):
         for data in convert_data:
 
             # 12bit-2047, 8bit-127
-            if data > pow(2,nbits-1)-1:
-                data = data - pow(2,nbits)
+            if data > pow(2, nbits-1)-1:
+                data = data - pow(2, nbits)
             else:
                 pass
             volt_value.append(data)
 
         volt_value = np.array(volt_value)
+
+        if nbits == 10:
+            volt_value = volt_value/4
 
         # read waveform preamble
         preamble = self.get_wave_preamble()
