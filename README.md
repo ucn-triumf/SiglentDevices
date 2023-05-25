@@ -5,15 +5,12 @@ API for interfacing with various Siglent devices using SCPI commands
 
 ### Install and import
 
-To "install" clone this directory onto your PYTHONPATH.
+To install clone this directory then execute the following: 
 
-Dependencies:
-
-* `matplotlib`
-* `pyvisa`
-* `pyvisa-py`
-* `numpy`
-* `pandas`
+```
+cd path/SiglentDevices
+pip install --user .
+```
 
 Import as
 
