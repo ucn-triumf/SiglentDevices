@@ -7,10 +7,6 @@
         https://siglentna.com/wp-content/uploads/dlm_uploads/2022/11/SPD3303X_QuickStart_E02A.pdf
 """
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import struct, math
 from . import SiglentBase
 
 class SPD3303(SiglentBase):
