@@ -13,6 +13,7 @@ Dependencies:
 * `pyvisa`
 * `pyvisa-py`
 * `numpy`
+* `pandas`
 
 Import as
 
