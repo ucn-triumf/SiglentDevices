@@ -1,0 +1,31 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "SiglentDevices"
+version = '0.0.1'
+authors  = [{name="Derek Fujimoto", email="dfujimoto@triumf.ca" }]
+description = "API for interfacing with various Siglent devices using SCPI commands"
+readme = "README.md"
+classifiers = [
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "License :: OSI Approved :: MIT",
+        "Operating System :: POSIX :: Linux",
+]
+license = {file = "LICENSE"}
+requires-python = ">=3.7"
+dependencies = [
+    'numpy',
+    'matplotlib',
+    'pandas',
+    'pyvisa',
+    'pyvisa-py',
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ucn-triumf/SiglentDevices"
+"Bug Tracker" = "https://github.com/ucn-triumf/SiglentDevices/issues"
