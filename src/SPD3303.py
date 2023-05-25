@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import struct, math
-from SiglentDevices import SiglentBase
+from . import SiglentBase
 
 class SPD3303(SiglentBase):
     """Control siglent programmable power supply

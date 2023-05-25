@@ -7,7 +7,7 @@
         https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
 """
 
-from SiglentDevices import SiglentBase
+from . import SiglentBase
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

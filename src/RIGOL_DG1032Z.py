@@ -12,7 +12,7 @@
     This object does not provide exhaustive functionality. Please update as needed.
 """
 
-from SiglentDevices import SiglentBase
+from . import SiglentBase
 
 class DG1032Z(SiglentBase):
     """Control RIGOL function generator
