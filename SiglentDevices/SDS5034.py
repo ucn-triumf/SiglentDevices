@@ -831,7 +831,7 @@ class SDS5034(SiglentBase):
         waves = []
         for i in range(1, 5):
 
-            if self.get_ch_state(i).strip() == 'ON':
+            if self.get_ch_state(i):
                 waves.append(self.read_wave_ch(i, start_pt=start_pt))
 
         # make dataframe
