@@ -13,8 +13,8 @@ pip install --user .
 ```
 
 Notes: 
-* 'user' should be typed in verbatim, it is not your username
-* don't forget the '.' at the end
+* `user` should be typed in verbatim, it is not your username
+* don't forget the `.` at the end
 
 Import as
 
