@@ -8,9 +8,13 @@ API for interfacing with various Siglent devices using SCPI commands
 To install clone this directory then execute the following: 
 
 ```
-cd path/SiglentDevices
+cd SiglentDevices
 pip install --user .
 ```
+
+Notes: 
+* 'user' should be typed in verbatim, it is not your username
+* don't forget the '.' at the end
 
 Import as
 
