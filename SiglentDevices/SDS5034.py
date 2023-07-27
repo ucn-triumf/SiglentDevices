@@ -11,7 +11,8 @@ from . import SiglentBase
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import struct, math
+import struct, math, time
+from tqdm import tqdm
 
 class SDS5034(SiglentBase):
     """Control siglent digital oscilloscope and read waveforms
@@ -23,6 +24,7 @@ class SDS5034(SiglentBase):
             sds (pyvisa resource): allows write/read/query to the device
             TDIV_ENUM (list): time division values from table 2 of https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf (page 559)
             waveforms (pd.DataFrame): waveform data in volts (includes all channels)
+            SIMPLE_MEASUREMENT_ITEMS (list): things which can be read as simple measurements from the scope
     """
 
     # global variables
@@ -72,6 +74,15 @@ class SDS5034(SiglentBase):
                     500,
                     1000,
                 )
+
+    SIMPLE_MEASUREMENT_ITEMS = ['PKPK','MAX','MIN','AMPL','TOP','BASE','LEVELX','CMEAN',
+                                     'MEAN','STDEV','VSTD','RMS','CRMS','MEDIAN','CMEDIAN',
+                                     'OVSN','FPRE','OVSP','RPRE','PER','FREQ','TMAX','TMIN',
+                                     'PWID','NWID','DUTY','NDUTY','WID','NBWID','DELAY','TIMEL',
+                                     'RISE','FALL','RISE20T80','FALL80T20','CCJ','PAREA','NAREA',
+                                     'AREA','ABSAREA','CYCLES','REDGES','FEDGES','EDGES',
+                                     'PPULSES','NPULSES','PACArea','NACArea','ACArea',
+                                     'ABSACArea']
 
     def __init__(self, hostname='tucan-scope1.triumf.ca'):
         """ Init.
@@ -197,6 +208,90 @@ class SDS5034(SiglentBase):
                 str: id of device
         """
         return self.query('*IDN?')
+
+    def get_measure_mode(self, return_is_simple=False):
+        """Get measurement mode simple|advanced
+
+        Args:
+            return_is_simple (bool): if True, return bool True if simple mode
+
+        Returns:
+            bool if return_is_simple else string simple|advanced
+        """
+
+        val = self.query('MEASure:MODE?')
+        val = val.lower()
+        if  return_is_simple:
+            return val == 'simple'
+        else:
+            return val
+
+    def get_measure_simple_source(self):
+        """Get source for the simple measurement, expecting channel
+
+        Returns:
+            int: channel number
+        """
+        val = self.query(f'MEAS:SIMP:SOURce?')
+
+        return int(val[-1])
+
+    def get_measure_simple_value(self, item, ch=None):
+        """Get specified measurement value. Items do not need to be displayed  to be read out.
+
+        Args:
+            item  (str): ALL|PKPK|MAX|MIN|AMPL|TOP|BASE|LEVELX|CMEAN|MEAN|
+                        STDEV|VSTD|RMS|CRMS|MEDIAN|CMEDIAN|OVSN|FPRE|
+                        OVSP|RPRE|PER|FREQ|TMAX|TMIN|PWID|NWID|DUTY|
+                        NDUTY|WID|NBWID|DELAY|TIMEL|RISE|FALL|RISE20T80
+                        |FALL80T20|CCJ|PAREA|NAREA|AREA|ABSAREA|CYCLES|
+                        REDGES|FEDGES|EDGES|PPULSES|NPULSES|PACArea|
+                        NACArea|ACArea|ABSACArea
+            ch (int|None): if None, measure current channel source, if int, check channel"""
+
+        # check measurment state
+        if not self.get_measure_state():
+            self.set_measure_state(True)
+            time.sleep(0.5)
+
+        # check simple mode
+        if not self.get_measure_mode(return_is_simple=True):
+            self.set_measure_mode('simple')
+            time.sleep(0.5)
+            print('Set measurement mode advanced to simple')
+
+        # check channel
+        if ch is not None:
+            ch_actual = self.get_measure_simple_source()
+            if ch != ch_actual:
+                self.set_measure_simple_source(ch)
+                time.sleep(0.5)
+                print(f'Set simple measurment source to C{ch}')
+
+        # check item from list
+        list_lower = [par.lower() for par in self.SIMPLE_MEASUREMENT_ITEMS]
+        item = item.lower()
+        if item not in list_lower:
+            raise RuntimeError(f'Item not in list: {self.SIMPLE_MEASUREMENT_ITEMS}')
+        idx = list_lower.index(item)
+        par = self.SIMPLE_MEASUREMENT_ITEMS[idx]
+
+        # get value
+        val = self.query(f'MEAS:SIMP:VAL? {par}')
+
+        try:
+            return float(val)
+        except ValueError:
+            return val
+
+    def get_measure_state(self):
+        """Get measurement state on/off
+
+        Returns:
+            bool: if True, turn measurements are active
+        """
+        val = self.query('MEAS?')
+        return val == 'ON'
 
     def get_run_state(self):
         """Returns:
@@ -392,6 +487,74 @@ class SDS5034(SiglentBase):
         unit = unit.upper()
         assert unit in ('V', 'A'), 'unit must be one of "V" or "A"'
         self.write(f'CHANnel{int(ch)}:UNIT {unit}')
+
+    def set_measure_mode(self, mode):
+        """Set measurement mode simple or advanced
+
+        Args:
+            mode (str): simple|advanced
+        """
+
+        if mode.lower() in 'simple':
+            mode = 'SIMP'
+        elif mode.lower() in 'advanced':
+            mode = 'ADV'
+        else:
+            raise RuntimeError('mode must be simple|advanced')
+
+        self.write(f'MEASure:MODE {mode}')
+
+    def set_measure_state(self, state):
+        """Set measurement state on/off
+
+        Args:
+            state (bool): if True, turn measurements on
+        """
+        state = 'ON' if state else 'OFF'
+        self.write(f'MEASure {state}')
+
+    def set_measure_simple_item(self, item, state=False):
+        """Set simple measurement item on/off
+
+        Args:
+            item (str):    ALL|PKPK|MAX|MIN|AMPL|TOP|BASE|LEVELX|CMEAN|MEAN|
+                           STDEV|VSTD|RMS|CRMS|MEDIAN|CMEDIAN|OVSN|FPRE|
+                           OVSP|RPRE|PER|FREQ|TMAX|TMIN|PWID|NWID|DUTY|
+                           NDUTY|WID|NBWID|DELAY|TIMEL|RISE|FALL|RISE20T80
+                           |FALL80T20|CCJ|PAREA|NAREA|AREA|ABSAREA|CYCLES|
+                           REDGES|FEDGES|EDGES|PPULSES|NPULSES|PACArea|
+                           NACArea|ACArea|ABSACArea
+            state (bool): if True, turn measurement parameter on
+        """
+
+        # get state
+        state = 'ON' if state else 'OFF'
+
+        # do all
+        if item.lower() == 'all':
+            for par in self.SIMPLE_MEASUREMENT_ITEMS:
+                self.write(f'MEASure:SIMPle:ITEM {par},{state}')
+
+        else:
+
+            # check item from list
+            list_lower = [par.lower() for par in self.SIMPLE_MEASUREMENT_ITEMS]
+            item = item.lower()
+            if item not in list_lower:
+                raise RuntimeError(f'Item not in list: {self.SIMPLE_MEASUREMENT_ITEMS}')
+            idx = list_lower.index(item)
+            par = self.SIMPLE_MEASUREMENT_ITEMS[idx]
+
+            # write state
+            self.write(f'MEASure:SIMPle:ITEM {par},{state}')
+
+    def set_measure_simple_source(self, ch):
+        """Set source for the simple measurement
+
+        Args:
+            ch (int): channel number
+        """
+        self.write(f'MEAS:SIMP:SOUR C{ch}')
 
     def set_run_state(self, run):
         """Start/Stop taking data, equivalent to pressing the Run/Stop button on the front panel.
@@ -795,7 +958,7 @@ class SDS5034(SiglentBase):
         tdiv = preamble['t_per_div']
         delay = preamble['t_delay_s']
         interval = preamble['sample_interval']
-
+        print(ch, vdiv, code, offset)
         # adjust voltage values
         volt_value = volt_value / code * vdiv - offset
 
