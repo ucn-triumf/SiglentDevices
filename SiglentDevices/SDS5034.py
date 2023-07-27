@@ -260,14 +260,6 @@ class SDS5034(SiglentBase):
             time.sleep(0.5)
             print('Set measurement mode advanced to simple')
 
-        # check channel
-        if ch is not None:
-            ch_actual = self.get_measure_simple_source()
-            if ch != ch_actual:
-                self.set_measure_simple_source(ch)
-                time.sleep(0.5)
-                print(f'Set simple measurment source to C{ch}')
-
         # check item from list
         list_lower = [par.lower() for par in self.SIMPLE_MEASUREMENT_ITEMS]
         item = item.lower()
@@ -276,9 +268,33 @@ class SDS5034(SiglentBase):
         idx = list_lower.index(item)
         par = self.SIMPLE_MEASUREMENT_ITEMS[idx]
 
+        # check channel
+        if ch is not None:
+            ch_actual = self.get_measure_simple_source()
+            if ch != ch_actual:
+
+                run_state = self.get_run_state()
+
+                # get current value, make sure it changes before reporting something
+                if not run_state:
+                    old_val = np.around(float(self.get_measure_simple_value(item, None)), 4)
+
+                # switch channels
+                self.set_measure_simple_source(ch)
+                print(f'Set simple measurment source to C{ch}')
+
+                # wait
+                if run_state:
+                    time.sleep(0.5)
+                else:
+                    val = float(self.query(f'MEAS:SIMP:VAL? {par}'))
+
+                    while old_val == np.around(val, 4):
+                        time.sleep(0.1)
+                        val = float(self.query(f'MEAS:SIMP:VAL? {par}'))
+
         # get value
         val = self.query(f'MEAS:SIMP:VAL? {par}')
-
         try:
             return float(val)
         except ValueError:
