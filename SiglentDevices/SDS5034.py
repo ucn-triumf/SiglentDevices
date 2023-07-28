@@ -24,7 +24,7 @@ class SDS5034(SiglentBase):
             sds (pyvisa resource): allows write/read/query to the device
             TDIV_ENUM (list): time division values from table 2 of https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf (page 559)
             waveforms (pd.DataFrame): waveform data in volts (includes all channels)
-            SIMPLE_MEASUREMENT_ITEMS (list): things which can be read as simple measurements from the scope
+            MEASUREMENT_ITEMS (list): things which can be read as simple measurements from the scope
     """
 
     # global variables
@@ -75,7 +75,7 @@ class SDS5034(SiglentBase):
                     1000,
                 )
 
-    SIMPLE_MEASUREMENT_ITEMS = ['PKPK','MAX','MIN','AMPL','TOP','BASE','LEVELX','CMEAN',
+    MEASUREMENT_ITEMS = ['PKPK','MAX','MIN','AMPL','TOP','BASE','LEVELX','CMEAN',
                                      'MEAN','STDEV','VSTD','RMS','CRMS','MEDIAN','CMEDIAN',
                                      'OVSN','FPRE','OVSP','RPRE','PER','FREQ','TMAX','TMIN',
                                      'PWID','NWID','DUTY','NDUTY','WID','NBWID','DELAY','TIMEL',
@@ -100,6 +100,30 @@ class SDS5034(SiglentBase):
         # set data storage
         self.preambles = {}
         self.waveforms = pd.DataFrame()
+
+    def _check_measure_mode(self, target_mode):
+        """Check that the measurement state is correct
+
+        Args:
+            target_mode (str): simple|advanced
+        """
+
+        # check measurment state
+        if not self.get_measure_state():
+            self.set_measure_state(True)
+            time.sleep(0.5)
+
+        # check mode
+        if target_mode == 'advanced':
+            if self.get_measure_mode(return_is_simple=True):
+                self.set_measure_mode('advanced')
+                time.sleep(0.5)
+                print('Set measurement mode simple to advanced')
+        else:
+            if self.get_measure_mode(return_is_simple=True):
+                self.set_measure_mode('simple')
+                time.sleep(0.5)
+                print('Set measurement mode advanced to simple')
 
     # simple basic commands
     def default(self):
@@ -226,12 +250,72 @@ class SDS5034(SiglentBase):
         else:
             return val
 
+    def get_measure_adv_item(self, idx):
+        """Get advanced measurement type
+
+        Args:
+            idx (int): index of item [1-12]
+        """
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+        self._check_measure_mode('advanced')
+        return self.query(f'MEASure:ADV:P{idx}:TYPE?').lower()
+
+    def get_measure_adv_nitems(self):
+        """Gets the total number of advanced measurement items displayed
+
+        Returns:
+            int: number of items displayed
+        """
+        self._check_measure_mode('advanced')
+        return int(self.query('MEAS:ADV:LIN?'))
+
+    def get_measure_adv_source(self, idx, source_num=1):
+        """Get the source of the measurment item.
+
+        Args:
+            idx (int): index of item [1-12]
+            source_num (int): source number 1|2
+        """
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+        self._check_measure_mode('advanced')
+        return int(self.query(f'MEAS:ADV:P{idx}:SOURce{source_num}?').replace('C', ''))
+
+    def get_measure_adv_state(self, idx):
+        """Get the state of the measurment item.
+
+        Args:
+            idx (int): index of item [1-12]
+
+        Returns:
+            bool: True if item is ON
+        """
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+        self._check_measure_mode('advanced')
+        state = self.query(f'MEAS:ADV:P{idx}?')
+        return state == 'ON'
+
+    def get_measure_adv_value(self, idx):
+        """get value of advanced measurement item
+
+        Args:
+            idx (int): index of item [1-12]
+        """
+
+        # check input
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+
+        self._check_measure_mode('advanced')
+
+        return float(self.query(f'MEAS:ADV:P{idx}:VAL?'))
+
     def get_measure_simple_source(self):
         """Get source for the simple measurement, expecting channel
 
         Returns:
             int: channel number
         """
+        self._check_measure_mode('simple')
+
         val = self.query(f'MEAS:SIMP:SOURce?')
 
         return int(val[-1])
@@ -249,24 +333,15 @@ class SDS5034(SiglentBase):
                         NACArea|ACArea|ABSACArea
             ch (int|None): if None, measure current channel source, if int, check channel"""
 
-        # check measurment state
-        if not self.get_measure_state():
-            self.set_measure_state(True)
-            time.sleep(0.5)
-
-        # check simple mode
-        if not self.get_measure_mode(return_is_simple=True):
-            self.set_measure_mode('simple')
-            time.sleep(0.5)
-            print('Set measurement mode advanced to simple')
+        self._check_measure_mode('simple')
 
         # check item from list
-        list_lower = [par.lower() for par in self.SIMPLE_MEASUREMENT_ITEMS]
+        list_lower = [par.lower() for par in self.MEASUREMENT_ITEMS]
         item = item.lower()
         if item not in list_lower:
-            raise RuntimeError(f'Item not in list: {self.SIMPLE_MEASUREMENT_ITEMS}')
+            raise RuntimeError(f'Item not in list: {self.MEASUREMENT_ITEMS}')
         idx = list_lower.index(item)
-        par = self.SIMPLE_MEASUREMENT_ITEMS[idx]
+        par = self.MEASUREMENT_ITEMS[idx]
 
         # check channel
         if ch is not None:
@@ -529,6 +604,66 @@ class SDS5034(SiglentBase):
         state = 'ON' if state else 'OFF'
         self.write(f'MEASure {state}')
 
+    def set_measure_adv_item(self, idx, item):
+        """Set advanced measurement item
+
+        Args:
+            idx (int): index of item [1-12]
+            item (str):    PKPK|MAX|MIN|AMPL|TOP|BASE|LEVELX|CMEAN|MEAN|
+                           STDEV|VSTD|RMS|CRMS|MEDIAN|CMEDIAN|OVSN|FPRE|
+                           OVSP|RPRE|PER|FREQ|TMAX|TMIN|PWID|NWID|DUTY|
+                           NDUTY|WID|NBWID|DELAY|TIMEL|RISE|FALL|RISE20T80
+                           |FALL80T20|CCJ|PAREA|NAREA|AREA|ABSAREA|CYCLES|
+                           REDGES|FEDGES|EDGES|PPULSES|NPULSES|PACArea|
+                           NACArea|ACArea|ABSACArea
+        """
+
+        # check index input
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+
+        # check item from list
+        list_lower = [par.lower() for par in self.MEASUREMENT_ITEMS]
+        item = item.lower()
+        if item not in list_lower:
+            raise RuntimeError(f'Item not in list: {self.MEASUREMENT_ITEMS}')
+        idxx = list_lower.index(item)
+        par = self.MEASUREMENT_ITEMS[idxx]
+
+        # write state
+        self.write(f'MEAS:ADV:P{idx}:TYPE {par}')
+
+    def set_measure_adv_nitems(self, nitems):
+        """Sets the total number of advanced measurement items displayed
+
+        Args:
+            items (int): number of items to display [1-12]
+        """
+        assert 0 < nitems < 13, 'nitems out of range: 1 <= nitems <= 12'
+        nitems = abs(min(12, nitems))
+        self.write(f'MEAS:ADV:LIN {nitems}')
+
+    def set_measure_adv_state(self, idx, state):
+        """Set the state of the measurment item.
+
+        Args:
+            idx (int): index of item [1-12]
+            state (bool): if true, turn item on
+        """
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+        state = 'ON' if state else 'OFF'
+        self.write(f'MEAS:ADV:P{idx} {state}')
+
+    def set_measure_adv_source(self, idx, ch, source_num=1):
+        """Set the source of the measurment item.
+
+        Args:
+            idx (int): index of item [1-12]
+            ch (int): channel number
+            source_num (int): source number 1|2
+        """
+        assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+        self.write(f'MEAS:ADV:P{idx}:SOURce{source_num} C{ch}')
+
     def set_measure_simple_item(self, item, state=False):
         """Set simple measurement item on/off
 
@@ -548,18 +683,18 @@ class SDS5034(SiglentBase):
 
         # do all
         if item.lower() == 'all':
-            for par in self.SIMPLE_MEASUREMENT_ITEMS:
+            for par in self.MEASUREMENT_ITEMS:
                 self.write(f'MEASure:SIMPle:ITEM {par},{state}')
 
         else:
 
             # check item from list
-            list_lower = [par.lower() for par in self.SIMPLE_MEASUREMENT_ITEMS]
+            list_lower = [par.lower() for par in self.MEASUREMENT_ITEMS]
             item = item.lower()
             if item not in list_lower:
-                raise RuntimeError(f'Item not in list: {self.SIMPLE_MEASUREMENT_ITEMS}')
+                raise RuntimeError(f'Item not in list: {self.MEASUREMENT_ITEMS}')
             idx = list_lower.index(item)
-            par = self.SIMPLE_MEASUREMENT_ITEMS[idx]
+            par = self.MEASUREMENT_ITEMS[idx]
 
             # write state
             self.write(f'MEASure:SIMPle:ITEM {par},{state}')
