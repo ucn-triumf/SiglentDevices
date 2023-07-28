@@ -20,6 +20,7 @@ class SDS5034(SiglentBase):
         Attributes:
 
             HORI_NUM (int): Number of horizontal divisions
+            MEASURE_ADV_MODE1_MAX (int): Number of advanced measurements allowable for mode 1
             preambles (dict): preamble values, saved when measured
             sds (pyvisa resource): allows write/read/query to the device
             TDIV_ENUM (list): time division values from table 2 of https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf (page 559)
@@ -30,6 +31,7 @@ class SDS5034(SiglentBase):
     # global variables
 
     HORI_NUM = 10
+    MEASURE_ADV_MODE1_MAX = 5
 
     # see table 2 from https://siglentna.com/wp-content/uploads/dlm_uploads/2022/07/SDS_ProgrammingGuide_EN11C-2.pdf
     # page 559
@@ -293,6 +295,14 @@ class SDS5034(SiglentBase):
         self._check_measure_mode('advanced')
         state = self.query(f'MEAS:ADV:P{idx}?')
         return state == 'ON'
+
+    def get_measure_adv_style(self):
+        """Get the display mode of the advanced measurements. Need M2 for more than 5 measurments. Need M1 for histograms
+
+        Returns:
+            int: 1|2 for M1 or M2 modes
+        """
+        return int(self.query('MEAS:ADV:STYL?')[1])
 
     def get_measure_adv_value(self, idx):
         """get value of advanced measurement item
@@ -621,6 +631,10 @@ class SDS5034(SiglentBase):
         # check index input
         assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
 
+        # check can display this many items
+        if idx > self.get_measure_adv_nitems():
+            self.set_measure_adv_nitems(idx)
+
         # check item from list
         list_lower = [par.lower() for par in self.MEASUREMENT_ITEMS]
         item = item.lower()
@@ -638,8 +652,15 @@ class SDS5034(SiglentBase):
         Args:
             items (int): number of items to display [1-12]
         """
+
+        # check input
         assert 0 < nitems < 13, 'nitems out of range: 1 <= nitems <= 12'
-        nitems = abs(min(12, nitems))
+
+        # check mode can support this many items
+        if nitems > self.MEASURE_ADV_MODE1_MAX:
+            self.set_measure_adv_style(2)
+
+        # set
         self.write(f'MEAS:ADV:LIN {nitems}')
 
     def set_measure_adv_state(self, idx, state):
@@ -650,6 +671,11 @@ class SDS5034(SiglentBase):
             state (bool): if true, turn item on
         """
         assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+
+        # check can display this many items
+        if idx > self.get_measure_adv_nitems():
+            self.set_measure_adv_nitems(idx)
+
         state = 'ON' if state else 'OFF'
         self.write(f'MEAS:ADV:P{idx} {state}')
 
@@ -662,7 +688,21 @@ class SDS5034(SiglentBase):
             source_num (int): source number 1|2
         """
         assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
+
+        # check can display this many items
+        if idx > self.get_measure_adv_nitems():
+            self.set_measure_adv_nitems(idx)
+
         self.write(f'MEAS:ADV:P{idx}:SOURce{source_num} C{ch}')
+
+    def set_measure_adv_style(self, mode=1):
+        """Set the display mode of the advanced measurements. Need M2 for more than 5 measurments. Need M1 for histograms
+
+        Args:
+            mode (int): 1|2 for M1 or M2 modes
+        """
+        assert mode in (1,2), 'mode must be one of 1|2'
+        self.write(f'MEAS:ADV:STYL M{mode}')
 
     def set_measure_simple_item(self, item, state=False):
         """Set simple measurement item on/off
