@@ -314,9 +314,15 @@ class SDS5034(SiglentBase):
         # check input
         assert 0 < idx < 13, 'idx out of range: 1 <= idx <= 12'
 
-        self._check_measure_mode('advanced')
+        # get value
+        val = self.query(f'MEAS:ADV:P{idx}:VAL?')
 
-        return float(self.query(f'MEAS:ADV:P{idx}:VAL?'))
+        # try conversion
+        try:
+            return float(val)
+        except ValueError:
+            if val == '***':
+                return np.nan
 
     def get_measure_simple_source(self):
         """Get source for the simple measurement, expecting channel
