@@ -1155,7 +1155,7 @@ class SDS5034(SiglentBase):
         tdiv = preamble['t_per_div']
         delay = preamble['t_delay_s']
         interval = preamble['sample_interval']
-        print(ch, vdiv, code, offset)
+
         # adjust voltage values
         volt_value = volt_value / code * vdiv - offset
 
