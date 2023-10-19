@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SiglentDevices"
-version = '0.0.1'
+version = '0.0.2'
 authors  = [{name="Derek Fujimoto", email="dfujimoto@triumf.ca" }]
 description = "API for interfacing with various Siglent devices using SCPI commands"
 readme = "README.md"
