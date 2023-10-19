@@ -131,22 +131,25 @@ class SDS5034(SiglentBase):
                 time.sleep(0.5)
                 print('Set measurement mode advanced to simple')
 
-    def _block(fn):
-        """Block operation until command is complete
+    # overloading
+    def write(self, *args, block=None, **kwargs):
+        """Write string to device.
 
         Args:
-            fn (function handle): function which to apply block decorator
+            block (bool, None): if true, block output until write is finished.
+                if None, use self.block_until_finshed as default condition
 
-        Returns:
-            wrapped function
+            remaining arguments passed to SiglentBase.write
         """
+        output = super().write(*args, **kwargs)
 
-        def wrapper(self, *args, **kwargs):
-            fn(self, *args, **kwargs)
-            if self.block_until_finished:
+        if block is None:
+            block = self.block_until_finished
+
+        if block:
                 self.wait()
 
-        return wrapper
+        return output
 
     # simple basic commands
     def default(self):
@@ -514,7 +517,6 @@ class SDS5034(SiglentBase):
         return self.query('WAVeform:WIDTh?').lower()
 
     # simple commands
-    @_block
     def set_adc_resolution(self, bits):
         """Set the number of bits used in data acquisition
 
@@ -530,7 +532,6 @@ class SDS5034(SiglentBase):
         if not state:
             self.stop()
 
-    @_block
     def set_ch_coupling(self, ch, mode):
         """Selects the coupling mode of the specified input channel.
 
@@ -542,7 +543,6 @@ class SDS5034(SiglentBase):
         assert mode in ('DC', 'AC', 'GND'), 'mode must be one of DC, AC, or GND'
         self.write(f'CHANnel{int(ch)}:COUPling {mode}')
 
-    @_block
     def set_ch_impedance(self, ch, z):
         """Sets the input impedance of the selected channel.
             There are two impedance values available. They are 1M and 50.
@@ -560,7 +560,6 @@ class SDS5034(SiglentBase):
         else:
             raise RuntimeError('z must be one of "1M" or "50"')
 
-    @_block
     def set_ch_offset(self, ch, offset):
         """Set vertical offset of the channel.
 
@@ -573,7 +572,6 @@ class SDS5034(SiglentBase):
         """
         return self.write(f'CHANnel{int(ch)}:OFFSet {offset:g}')
 
-    @_block
     def set_ch_probe(self, ch, attenuation=None):
         """Specifies the probe attenuation factor for the selected channel.
 
@@ -591,7 +589,6 @@ class SDS5034(SiglentBase):
             assert 1e-6 < attenuation < 1e6, 'Attenuation out of bounds: (1e-6, 1e6)'
             self.write(f'CHANnel{int(ch)}:PROBe VALue {attenuation:g}')
 
-    @_block
     def set_ch_scale(self, ch, scale):
         """Sets the vertical sensitivity in Volts/div.
 
@@ -604,7 +601,6 @@ class SDS5034(SiglentBase):
         """
         return self.write(f'CHANnel{int(ch)}:SCALe {scale:g}')
 
-    @_block
     def set_ch_state(self, ch, on):
         """Turns the display of the specified channel on or off.
 
@@ -615,7 +611,6 @@ class SDS5034(SiglentBase):
         state = 'ON' if on else 'OFF'
         self.write(f'CHANnel{int(ch)}:SWITch {state}')
 
-    @_block
     def set_ch_unit(self, ch, unit):
         """Changes the unit of input signal of specified channel: voltage (V) or current (A)
 
@@ -627,7 +622,6 @@ class SDS5034(SiglentBase):
         assert unit in ('V', 'A'), 'unit must be one of "V" or "A"'
         self.write(f'CHANnel{int(ch)}:UNIT {unit}')
 
-    @_block
     def set_measure_mode(self, mode):
         """Set measurement mode simple or advanced
 
@@ -644,7 +638,6 @@ class SDS5034(SiglentBase):
 
         self.write(f'MEASure:MODE {mode}')
 
-    @_block
     def set_measure_state(self, state):
         """Set measurement state on/off
 
@@ -654,7 +647,6 @@ class SDS5034(SiglentBase):
         state = 'ON' if state else 'OFF'
         self.write(f'MEASure {state}')
 
-    @_block
     def set_measure_adv_item(self, idx, item):
         """Set advanced measurement item
 
@@ -687,7 +679,6 @@ class SDS5034(SiglentBase):
         # write state
         self.write(f'MEAS:ADV:P{idx}:TYPE {par}')
 
-    @_block
     def set_measure_adv_nitems(self, nitems):
         """Sets the total number of advanced measurement items displayed
 
@@ -705,7 +696,6 @@ class SDS5034(SiglentBase):
         # set
         self.write(f'MEAS:ADV:LIN {nitems}')
 
-    @_block
     def set_measure_adv_state(self, idx, state):
         """Set the state of the measurment item.
 
@@ -722,7 +712,6 @@ class SDS5034(SiglentBase):
         state = 'ON' if state else 'OFF'
         self.write(f'MEAS:ADV:P{idx} {state}')
 
-    @_block
     def set_measure_adv_source(self, idx, ch, source_num=1):
         """Set the source of the measurment item.
 
@@ -739,7 +728,6 @@ class SDS5034(SiglentBase):
 
         self.write(f'MEAS:ADV:P{idx}:SOURce{source_num} C{ch}')
 
-    @_block
     def set_measure_adv_style(self, mode=1):
         """Set the display mode of the advanced measurements. Need M2 for more than 5 measurments. Need M1 for histograms
 
@@ -749,7 +737,6 @@ class SDS5034(SiglentBase):
         assert mode in (1,2), 'mode must be one of 1|2'
         self.write(f'MEAS:ADV:STYL M{mode}')
 
-    @_block
     def set_measure_simple_item(self, item, state=False):
         """Set simple measurement item on/off
 
@@ -785,7 +772,6 @@ class SDS5034(SiglentBase):
             # write state
             self.write(f'MEASure:SIMPle:ITEM {par},{state}')
 
-    @_block
     def set_measure_simple_source(self, ch):
         """Set source for the simple measurement
 
@@ -794,7 +780,6 @@ class SDS5034(SiglentBase):
         """
         self.write(f'MEAS:SIMP:SOUR C{ch}')
 
-    @_block
     def set_run_state(self, run):
         """Start/Stop taking data, equivalent to pressing the Run/Stop button on the front panel.
 
@@ -806,7 +791,6 @@ class SDS5034(SiglentBase):
         else:
             self.stop()
 
-    @_block
     def set_sequence(self, state):
         """Enables or disables sequence acquisition mode.
 
@@ -818,7 +802,6 @@ class SDS5034(SiglentBase):
         else:
             self.write('ACQuire:SEQuence OFF')
 
-    @_block
     def set_sequence_count(self, value):
         """Sets the number of memory segments to acquire.
 
@@ -832,7 +815,6 @@ class SDS5034(SiglentBase):
 
         self.write(f'ACQuire:SEQuence:COUNt {int(value)}')
 
-    @_block
     def set_smpl_rate(self, rate):
         """Sets the sampling rate when in the fixed sampling rate mode.
 
@@ -846,7 +828,6 @@ class SDS5034(SiglentBase):
             self.write('ACQuire:MMANagement FSRate')
             self.write(f'ACQuire:SRATe {rate:g}')
 
-    @_block
     def set_time_delay(self, delay):
         """Specifies the main timebase delay.
 
@@ -859,7 +840,6 @@ class SDS5034(SiglentBase):
         """
         self.write(f'TIMebase:DELay {float(delay):E}')
 
-    @_block
     def set_time_scale(self, scale):
         """Sets the horizontal scale per division for the main window.
 
@@ -872,7 +852,6 @@ class SDS5034(SiglentBase):
         """
         self.write(f'TIMebase:SCALe {scale:E}')
 
-    @_block
     def set_trig_mode(self, mode):
         """Sets the mode of the trigger.
 
@@ -888,7 +867,6 @@ class SDS5034(SiglentBase):
         else:
             raise RuntimeError("mode must be one of 'single', 'normal', or 'auto'")
 
-    @_block
     def set_trig_state(self, state):
         """Set trigger state
 
@@ -902,7 +880,6 @@ class SDS5034(SiglentBase):
         else:
             raise RuntimeError('Bad state input, should be one of RUN or STOP')
 
-    @_block
     def set_wave_ch(self, ch):
         """Specifies the source waveform to be transferred from the oscilloscope
 
@@ -911,28 +888,24 @@ class SDS5034(SiglentBase):
         """
         self.write(f'WAVeform:SOURce C{int(ch)}')
 
-    @_block
     def set_wave_startpt(self, pt):
         """Args:
             pt (int): index of starting data point for waveform transfer
         """
         self.write(f'WAVeform:STARt {int(pt)}')
 
-    @_block
     def set_wave_interval(self, interval):
         """Args:
             interval (int): interval between data points for waveform transfer
         """
         self.write(f'WAVeform:INTerval {int(interval)}')
 
-    @_block
     def set_wave_npts(self, npts):
         """Args:
             npts (int): number of waveform points to be transferred
         """
         self.write(f'WAVeform:POINt {int(npts)}')
 
-    @_block
     def set_wave_width(self, format):
         """Sets the current output format for the transfer of waveform data.
 
@@ -1007,7 +980,7 @@ class SDS5034(SiglentBase):
             self.set_wave_ch(ch)
 
         # read preamble
-        self.write("WAV:PREamble?")
+        self.write("WAV:PREamble?", block=False)
         recv_all = self.read_bytes(350)
         recv = recv_all[recv_all.find(b'#')+11:]
 
@@ -1170,7 +1143,7 @@ class SDS5034(SiglentBase):
         for i in range(0, read_times):
             start = i*one_piece_num
             self.set_wave_startpt(start)
-            self.write("WAV:DATA?")
+            self.write("WAV:DATA?", block=False)
             recv_rtn = self.read_raw()
             recv = list(recv_rtn[recv_rtn.find(b'#') + 11:-2])
             recv_all += recv
@@ -1275,7 +1248,11 @@ class SDS5034(SiglentBase):
             ax = plt.gca()
 
         # draw
-        df = self.waveforms[f'C{ch}']
+        try:
+            df = self.waveforms[f'C{ch}']
+        except KeyError:
+            self.read_wave_ch(ch)
+            df = self.waveforms[f'C{ch}']
         ax.plot(df.index.values, df.values, label=f'CH{ch}', **plotargs)
 
         # get preamble
