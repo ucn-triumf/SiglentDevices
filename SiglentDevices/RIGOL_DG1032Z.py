@@ -243,6 +243,16 @@ class DG1032Z(SiglentBase):
         # set waveform
         self.write(f'SOUR{ch}:APPL:{mode} {freq},{amp},{offset},{phase}')
 
+    def set_wave_custom(self, ch, voltages):
+        """Send a custom waveform to the AWG
+
+        Args:
+            ch (int): channel number, 1|2
+            voltages (iterable): list of voltages to set
+        """
+
+
+
     def wait(self):
         """Wait until operation has completed. Block operation until completed"""
         self.query('*OPC?')
