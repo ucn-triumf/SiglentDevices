@@ -190,10 +190,11 @@ class DG1032Z(SiglentBase):
         else:
             self.write(f'SOUR{ch}:AM:STAT OFF')
 
-    def set_wave(self, waveform='', ch=1, freq=1000, amp=1, offset=0, phase=0):
+    def set_wave(self, ch=1, waveform='', freq=1000, amp=1, offset=0, phase=0):
         """Setup arbitrary waveforms
 
         Args:
+            ch (int): channel number, 1|2
             waveform (str): one of SINusoid|SQUare|RAMP|PULSe|NOISe|USER|HARMonic|CUSTom|DC|KAISER|
                                 ROUNDPM|SINC|NEGRAMP|ATTALT|AMPALT|STAIRDN|STAIRUP|STAIRUD|CPULSE|
                                 PPULSE|NPULSE|TRAPEZIA|ROUNDHALF|ABSSINE|ABSSINEHALF|SINETRA|
@@ -214,7 +215,6 @@ class DG1032Z(SiglentBase):
                                 ISO76372TP1|ISO76372TP2A|ISO76372TP2B|ISO76372TP3A|ISO76372TP3B|
                                 ISO76372TP4|ISO76372TP5A|ISO76372TP5B|ISO167502SP|ISO167502VR|SRC|
                                 IGNITION|NIMHDISCHARGE|GATEVIBR
-            ch (int): channel number, 1|2
             freq (float): frequency in Hz. 1 uHz to 60 MHz
             amp (float): Vpp in volts
             offset (float): DC offset in volts
