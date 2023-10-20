@@ -28,7 +28,7 @@ class DG1032Z(SiglentBase):
         Args:
             hostname (str): address of device (DNS or IP)
         """
-        super().__init__(hostname=hostname)
+        super.__init__(hostname=hostname)
 
         # setup block set values
         self.block_until_finished = True
@@ -113,6 +113,18 @@ class DG1032Z(SiglentBase):
             raise RuntimeError(f'Wave type {val[0]} not yet implemented')
 
         return out
+
+    def set_amp(self, ch=1, amp=0):
+        """Set channel amplitude
+
+        Args:
+            ch (int): channel number, 1|2
+            amp (float): Vpp in volts
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        self.write(f'SOUR{ch}:VOLT {amp}')
 
     def set_ch_state(self, ch=1, state=False):
         """Turn channel on/off
@@ -259,13 +271,11 @@ class DG1032Z(SiglentBase):
 
             remaining arguments passed to SiglentBase.write
         """
-        output = super().write(*args, **kwargs)
+        super.write(*args, **kwargs)
 
         if block is None:
             block = self.block_until_finished
 
         if block:
                 self.wait()
-
-        return output
 

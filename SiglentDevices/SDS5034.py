@@ -131,26 +131,6 @@ class SDS5034(SiglentBase):
                 time.sleep(0.5)
                 print('Set measurement mode advanced to simple')
 
-    # overloading
-    def write(self, *args, block=None, **kwargs):
-        """Write string to device.
-
-        Args:
-            block (bool, None): if true, block output until write is finished.
-                if None, use self.block_until_finshed as default condition
-
-            remaining arguments passed to SiglentBase.write
-        """
-        output = super().write(*args, **kwargs)
-
-        if block is None:
-            block = self.block_until_finished
-
-        if block:
-                self.wait()
-
-        return output
-
     # simple basic commands
     def default(self):
         """Resets the oscilloscope to the default configuration, equivalent to the Default button on the front panel.
@@ -172,6 +152,23 @@ class SDS5034(SiglentBase):
     def wait(self):
         """Wait until operation has completed. Block operation until completed"""
         self.query('*OPC?')
+
+    def write(self, *args, block=None, **kwargs):
+        """Write string to device.
+
+        Args:
+            block (bool, None): if true, block output until write is finished.
+                if None, use self.block_until_finshed as default condition
+
+            remaining arguments passed to SiglentBase.write
+        """
+        super().write(*args, **kwargs)
+
+        if block is None:
+            block = self.block_until_finished
+
+        if block:
+                self.wait()
 
     # simple queries
     def get_adc_resolution(self):
