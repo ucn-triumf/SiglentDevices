@@ -22,29 +22,47 @@ class DG1032Z(SiglentBase):
 
     """
 
+    FUNCTIONS = ('SINusoid', 'SQUare', 'RAMP', 'PULSe', 'NOISe', 'USER',
+                 'HARMonic', 'CUSTom', 'DC', 'KAISER', 'ROUNDPM', 'SINC',
+                 'NEGRAMP', 'ATTALT', 'AMPALT', 'STAIRDN', 'STAIRUP',
+                 'STAIRUD', 'CPULSE', 'PPULSE', 'NPULSE', 'TRAPEZIA',
+                 'ROUNDHALF', 'ABSSINE', 'ABSSINEHALF', 'SINETRA', 'SINEVER',
+                 'EXPRISE', 'EXPFALL', 'TAN', 'COT', 'SQRT', 'X2DATA', 'GAUSS',
+                 'HAVERSINE', 'LORENTZ', 'DIRICHLET', 'GAUSSPULSE', 'AIRY',
+                 'CARDIAC', 'QUAKE', 'GAMMA', 'VOICE', 'TV', 'COMBIN',
+                 'BANDLIMITED', 'STEPRESP', 'BUTTERWORTH', 'CHEBYSHEV1',
+                 'CHEBYSHEV2', 'BOXCAR', 'BARLETT', 'TRIANG', 'BLACKMAN',
+                 'HAMMING', 'HANNING', 'DUALTONE', 'ACOS', 'ACOSH', 'ACOTCON',
+                 'ACOTPRO', 'ACOTHCON', 'ACOTHPRO', 'ACSCCON', 'ACSCPRO',
+                 'ACSCHCON', 'ACSCHPRO', 'ASECCON', 'ASECPRO', 'ASECH', 'ASIN',
+                 'ASINH', 'ATAN', 'ATANH', 'BESSELJ', 'BESSELY', 'CAUCHY',
+                 'COSH', 'COSINT', 'COTHCON', 'COTHPRO', 'CSCCON', 'CSCPRO',
+                 'CSCHCON', 'CSCHPRO', 'CUBIC', 'ERF', 'ERFC', 'ERFCINV',
+                 'ERFINV', 'LAGUERRE', 'LAPLACE', 'LEGEND', 'LOG', 'LOGNORMAL',
+                 'MAXWELL', 'RAYLEIGH', 'RECIPCON', 'RECIPPRO', 'SECCON',
+                 'SECPRO', 'SECH', 'SINH', 'SININT', 'TANH', 'VERSIERA',
+                 'WEIBULL', 'BARTHANN', 'BLACKMANH', 'BOHMANWIN', 'CHEBWIN',
+                 'FLATTOPWIN', 'NUTTALLWIN', 'PARZENWIN', 'TAYLORWIN',
+                 'TUKEYWIN', 'CWPUSLE', 'LFPULSE', 'LFMPULSE', 'EOG', 'EEG',
+                 'EMG', 'PULSILOGRAM', 'TENS1', 'TENS2', 'TENS3', 'SURGE',
+                 'DAMPEDOSC', 'SWINGOSC', 'RADAR', 'THREEAM', 'THREEFM',
+                 'THREEPM', 'THREEPWM', 'THREEPFM', 'RESSPEED', 'MCNOSIE',
+                 'PAHCUR', 'RIPPLE', 'ISO76372TP1', 'ISO76372TP2A',
+                 'ISO76372TP2B', 'ISO76372TP3A', 'ISO76372TP3B', 'ISO76372TP4',
+                 'ISO76372TP5A', 'ISO76372TP5B', 'ISO167502SP', 'ISO167502VR',
+                 'SRC', 'IGNITION', 'NIMHDISCHARGE', 'GATEVIBR',
+                 'SIN', 'SQU', 'RAMP', 'PULS', 'NOIS', 'HARM', 'CUST', )
+
     def __init__(self, hostname='tucan-awg01.triumf.ca'):
         """Init.
 
         Args:
             hostname (str): address of device (DNS or IP)
         """
-        super.__init__(hostname=hostname)
+        super().__init__(hostname=hostname)
 
         # setup block set values
         self.block_until_finished = True
-
-    def _set_wave(self, wave, ch, freq, amp, offset, phase):
-        """Set AWG to produce a given wave type with certain parameters
-
-        Args:
-            wave (str): wave shape, SIN|SQU|TRI
-            ch (int): channel number, 1|2
-            freq (float): frequency in Hz. 1 uHz to 60 MHz
-            amp (float): Vpp in volts
-            offset (float): DC offset in volts
-            phase (float): phase in degrees. 0 to 360 deg
-        """
-        self.write(f"SOURce{ch}:APPLy:{wave} {freq},{amp},{offset},{phase}")
 
     def get_ch_state(self, ch=1):
         """Get channel on/off state
@@ -172,7 +190,7 @@ class DG1032Z(SiglentBase):
         else:
             self.write(f'SOUR{ch}:AM:STAT OFF')
 
-    def set_wave_arb(self, waveform='', ch=1, freq=1000, amp=1, offset=0, phase=0):
+    def set_wave(self, waveform='', ch=1, freq=1000, amp=1, offset=0, phase=0):
         """Setup arbitrary waveforms
 
         Args:
@@ -203,60 +221,27 @@ class DG1032Z(SiglentBase):
             phase (float): phase in degrees. 0 to 360 deg
         """
 
-        # freq mode easiest to work with
-        self.write(f"SOUR{ch}:FUNC:ARB:MODE FREQ")
-
-        # set waveform
-        self.write(f'SOUR1:FUNC {waveform}')
+        # check input
+        if waveform not in self.FUNCTIONS:
+            raise RuntimeError(f'waveform "{waveform}" not one of {self.FUNCTIONS}')
 
         # set parameters
-        self.write(f'SOUR{ch}:APPL:USER {freq},{amp},{offset},{phase}')
+        if waveform not in ('SINusoid', 'SQUare', 'RAMP', 'PULSe', 'NOISe', 'SIN', 'SQU', 'RAMP', 'PULS', 'NOIS'):
 
-    def set_wave_dc(self, ch=1, offset=0):
-        """Set DC output
+            # if arb
+            mode = 'USER'
 
-        Args:
-            ch (int): channel number, 1|2
-            offset (float): DC offset in volts
-        """
-        # freq and amp are not applicable but they must be specified as a placeholder
-        self.write('SOUR{ch}:APPL:DC 1,1,{offset}')
+            # freq mode easiest to work with
+            self.write(f"SOUR{ch}:FUNC:ARB:MODE FREQ")
 
-    def set_wave_sin(self, ch=1, freq=1000, amp=5, offset=0, phase=0):
-        """Set AWG to produce a sine wave
+            # set waveform
+            self.write(f'SOUR{ch}:FUNC {waveform}')
 
-        Args:
-            ch (int): channel number, 1|2
-            freq (float): frequency in Hz. 1 uHz to 60 MHz
-            amp (float): Vpp in volts
-            offset (float): DC offset in volts
-            phase (float): phase in degrees. 0 to 360 deg
-        """
-        self._set_wave('SIN', ch, freq, amp, offset, phase)
+        else:
+            mode = waveform
 
-    def set_wave_square(self, ch=1, freq=1000, amp=5, offset=0, phase=0):
-        """Set AWG to produce a square wave
-
-        Args:
-            ch (int): channel number, 1|2
-            freq (float): frequency in Hz. 1 uHz to 60 MHz
-            amp (float): Vpp in volts
-            offset (float): DC offset in volts
-            phase (float): phase in degrees. 0 to 360 deg
-        """
-        self._set_wave('SQU', ch, freq, amp, offset, phase)
-
-    def set_wave_triangle(self, ch=1, freq=1000, amp=5, offset=0, phase=0):
-        """Set AWG to produce a triangle wave
-
-        Args:
-            ch (int): channel number, 1|2
-            freq (float): frequency in Hz. 1 uHz to 60 MHz
-            amp (float): Vpp in volts
-            offset (float): DC offset in volts
-            phase (float): phase in degrees. 0 to 360 deg
-        """
-        self._set_wave('TRI', ch, freq, amp, offset, phase)
+        # set waveform
+        self.write(f'SOUR{ch}:APPL:{mode} {freq},{amp},{offset},{phase}')
 
     def wait(self):
         """Wait until operation has completed. Block operation until completed"""
@@ -271,11 +256,11 @@ class DG1032Z(SiglentBase):
 
             remaining arguments passed to SiglentBase.write
         """
-        super.write(*args, **kwargs)
+        super().write(*args, **kwargs)
 
         if block is None:
             block = self.block_until_finished
 
         if block:
-                self.wait()
+            self.wait()
 
