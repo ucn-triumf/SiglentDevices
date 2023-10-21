@@ -23,6 +23,9 @@ class DG1032Z(SiglentBase):
 
     """
 
+    # Max number of points to send to device in a single batch
+    ARB_MAX_SEND = 5000
+
     FUNCTIONS = ('SINusoid', 'SQUare', 'RAMP', 'PULSe', 'NOISe', 'USER',
                  'HARMonic', 'CUSTom', 'DC', 'KAISER', 'ROUNDPM', 'SINC',
                  'NEGRAMP', 'ATTALT', 'AMPALT', 'STAIRDN', 'STAIRUP',
@@ -78,6 +81,17 @@ class DG1032Z(SiglentBase):
 
         return val == 'ON'
 
+    def get_freq(self, ch=1):
+        """Get channel frequency in Hz
+
+        Args:
+            ch (int): channel number, 1|2
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        return self.query(f'SOUR{ch}:FREQ?')
+
     def get_mod_am_state(self, ch=1):
         """Get output modification state
 
@@ -88,6 +102,17 @@ class DG1032Z(SiglentBase):
             bool: True if modification active, else False
         """
         return self.query(f'SOUR{ch}:AM:STAT?') == 'ON'
+
+    def get_offset(self, ch=1):
+        """Get channel offset in volts
+
+        Args:
+            ch (int): channel number, 1|2
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        return self.query(f'SOUR{ch}:VOLT:OFFS?')
 
     def get_wave(self, ch=1):
         """Read out waveform being applied currently by AWG
@@ -133,17 +158,26 @@ class DG1032Z(SiglentBase):
 
         return out
 
-    def set_amp(self, ch=1, amp=0):
-        """Set channel amplitude
+    def get_vpp(self, ch=1):
+        """Get channel peak-peak amplitude
 
         Args:
             ch (int): channel number, 1|2
-            amp (float): Vpp in volts
         """
         if ch not in (1, 2):
             raise RuntimeError('ch must be one of 1 or 2')
 
-        self.write(f'SOUR{ch}:VOLT {amp}')
+        return self.query(f'SOUR{ch}:VOLT?')
+
+    def set_ch_state(self, ch=1, state=False):
+        """Turn channel on/off
+
+        Args:
+            ch (int): channel number, 1|2
+            state (bool): if true, turn on channel output
+        """
+        if state:   self.write(f'OUTPut{ch}:STATe ON')
+        else:       self.write(f'OUTPut{ch}:STATe OFF')
 
     def set_freq(self, ch=1, freq=1):
         """Set channel frequency in Hz
@@ -156,28 +190,6 @@ class DG1032Z(SiglentBase):
             raise RuntimeError('ch must be one of 1 or 2')
 
         self.write(f'SOUR{ch}:FREQ {freq}')
-
-    def set_offset(self, ch=1, offset=1):
-        """Set channel offset in volts
-
-        Args:
-            ch (int): channel number, 1|2
-            offset (float): voltage in volts
-        """
-        if ch not in (1, 2):
-            raise RuntimeError('ch must be one of 1 or 2')
-
-        self.write(f'SOUR{ch}:VOLT:OFFS {offset}')
-
-    def set_state(self, ch=1, state=False):
-        """Turn channel on/off
-
-        Args:
-            ch (int): channel number, 1|2
-            state (bool): if true, turn on channel output
-        """
-        if state:   self.write(f'OUTPut{ch}:STATe ON')
-        else:       self.write(f'OUTPut{ch}:STATe OFF')
 
     def set_mod_am(self, ch=1, waveform='SIN', depth=100, freq=1):
         """Set waveform modification for internal modulation
@@ -215,7 +227,31 @@ class DG1032Z(SiglentBase):
         else:
             self.write(f'SOUR{ch}:AM:STAT OFF')
 
-    def set_wave(self, ch=1, waveform='', freq=1000, amp=1, offset=0, phase=0):
+    def set_offset(self, ch=1, offset=1):
+        """Set channel offset in volts
+
+        Args:
+            ch (int): channel number, 1|2
+            offset (float): voltage in volts
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        self.write(f'SOUR{ch}:VOLT:OFFS {offset}')
+
+    def set_vpp(self, ch=1, vpp=0):
+        """Set channel peak-peak amplitude
+
+        Args:
+            ch (int): channel number, 1|2
+            vpp (float): peak-peak voltage in volts
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        self.write(f'SOUR{ch}:VOLT {vpp}')
+
+    def set_wave(self, ch=1, waveform='', freq=1000, vpp=1, offset=0, phase=0):
         """Setup arbitrary waveforms
 
         Args:
@@ -241,7 +277,7 @@ class DG1032Z(SiglentBase):
                                 ISO76372TP4|ISO76372TP5A|ISO76372TP5B|ISO167502SP|ISO167502VR|SRC|
                                 IGNITION|NIMHDISCHARGE|GATEVIBR
             freq (float): frequency in Hz. 1 uHz to 60 MHz
-            amp (float): Vpp in volts
+            vpp (float): peak-peak voltage in volts
             offset (float): DC offset in volts
             phase (float): phase in degrees. 0 to 360 deg
         """
@@ -266,10 +302,14 @@ class DG1032Z(SiglentBase):
             mode = waveform
 
         # set waveform
-        self.write(f'SOUR{ch}:APPL:{mode} {freq},{amp},{offset},{phase}')
+        self.write(f'SOUR{ch}:APPL:{mode} {freq},{vpp},{offset},{phase}')
 
     def set_wave_custom(self, ch, voltages, period):
         """Send a custom waveform to the AWG
+
+        See this article for details:
+
+        https://rigol.my.site.com/support/s/article/methods-for-programmatically-creating-arbitrary-waves1
 
         Args:
             ch (int): channel number, 1|2
@@ -280,37 +320,56 @@ class DG1032Z(SiglentBase):
         # data type
         voltages = np.array(voltages)
 
-        # normalize voltages
+        # get length and point spacing
+        npts = len(voltages)
+        dt = npts/period
+
+        # center and normalize voltages
+        offset = np.mean(voltages)
+        voltages -= offset
         maxv = max(voltages)
         minv = min(voltages)
 
-        npts = len(voltages)
-        amp = maxv - minv
-        offset = (maxv+minv)/2
+        norm = max(abs(maxv), abs(minv))
+        vpp = abs(maxv-minv)
+        voltages = voltages / norm
 
-        voltages = (voltages - offset) / amp
+        # set amp values to counteract normalization
+        self.set_offset(ch, offset)
+        self.set_vpp(ch, vpp)
 
-        # set amp values
-        self.set_offset(ch, offset*2)
-        self.set_amp(ch, amp*4)
+        # make sure data is sent in small enough groups
+        npartitions = int(np.ceil(npts / self.ARB_MAX_SEND))
+        volts_send = np.array_split(voltages, npartitions)
 
-        # convert voltages to bytes
-        voltages = voltages * 8191.5 + 8191.5
-        voltages = voltages.astype('<H')
-        voltages = voltages.tobytes()
+        # send data in groups
+        for i in range(npartitions):
 
-        # make header line
-        nchar = len(str(npts*2))
-        header = f'SOUR{ch}:DATA:DAC16 VOLATILE,END,#{nchar}{npts*2}'
+            # get data to send
+            volts = volts_send[i]
+            npts = len(volts)
 
-        # write voltages to out
-        self.write_raw(bytes(header, 'ascii') + voltages)
+            # convert voltages to bytes
+            volts = volts * 8191.5 + 8191.5
+            volts = volts.astype('<H')
+            volts = volts.tobytes()
+
+            # make header line
+            nchar = len(str(npts*2))
+            if i+1 < npartitions:
+                flag = 'CON'
+            else:
+                flag = 'END'
+
+            header = f'SOUR{ch}:DATA:DAC16 VOLATILE,{flag},#{nchar}{npts*2}'
+
+            # write voltages to out
+            self.write_raw(bytes(header, 'ascii') + volts)
 
         # set arb in srate mode
         self.write(f'SOURCE{ch}:FUNCTION:ARB:MODE SRATE')
 
         # set readback rate
-        dt = npts/period
         self.write(f'SOURCE{ch}:FUNCTION:ARB:SRATE {dt:E}')
 
     def wait(self):
