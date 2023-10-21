@@ -7,15 +7,15 @@ Siglentbase
 > Auto-generated documentation for [SiglentDevices.SiglentBase](../../SiglentDevices/SiglentBase.py) module.
 
 - [Siglentbase](#siglentbase)
-  - [SiglentBase](#siglentbase-1)
+  - [SiglentBase](#siglentbase)
     - [SiglentBase.close](#siglentbaseclose)
     - [SiglentBase.flush](#siglentbaseflush)
     - [SiglentBase.query](#siglentbasequery)
     - [SiglentBase.read](#siglentbaseread)
-    - [SiglentBase.read\_bytes](#siglentbaseread_bytes)
-    - [SiglentBase.read\_raw](#siglentbaseread_raw)
+    - [SiglentBase.read_bytes](#siglentbaseread_bytes)
+    - [SiglentBase.read_raw](#siglentbaseread_raw)
     - [SiglentBase.write](#siglentbasewrite)
-    - [SiglentBase.write\_raw](#siglentbasewrite_raw)
+    - [SiglentBase.write_raw](#siglentbasewrite_raw)
 
 ## SiglentBase
 

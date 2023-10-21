@@ -8,24 +8,23 @@ Rigol Dg1032z
 
 - [Rigol Dg1032z](#rigol-dg1032z)
   - [DG1032Z](#dg1032z)
-    - [DG1032Z.get\_ch\_state](#dg1032zget_ch_state)
-    - [DG1032Z.get\_mod\_am\_state](#dg1032zget_mod_am_state)
-    - [DG1032Z.get\_wave](#dg1032zget_wave)
-    - [DG1032Z.set\_amp](#dg1032zset_amp)
-    - [DG1032Z.set\_ch\_state](#dg1032zset_ch_state)
-    - [DG1032Z.set\_mod\_am](#dg1032zset_mod_am)
-    - [DG1032Z.set\_mod\_am\_state](#dg1032zset_mod_am_state)
-    - [DG1032Z.set\_wave\_arb](#dg1032zset_wave_arb)
-    - [DG1032Z.set\_wave\_dc](#dg1032zset_wave_dc)
-    - [DG1032Z.set\_wave\_sin](#dg1032zset_wave_sin)
-    - [DG1032Z.set\_wave\_square](#dg1032zset_wave_square)
-    - [DG1032Z.set\_wave\_triangle](#dg1032zset_wave_triangle)
+    - [DG1032Z.get_ch_state](#dg1032zget_ch_state)
+    - [DG1032Z.get_mod_am_state](#dg1032zget_mod_am_state)
+    - [DG1032Z.get_wave](#dg1032zget_wave)
+    - [DG1032Z.set_amp](#dg1032zset_amp)
+    - [DG1032Z.set_freq](#dg1032zset_freq)
+    - [DG1032Z.set_mod_am](#dg1032zset_mod_am)
+    - [DG1032Z.set_mod_am_state](#dg1032zset_mod_am_state)
+    - [DG1032Z.set_offset](#dg1032zset_offset)
+    - [DG1032Z.set_state](#dg1032zset_state)
+    - [DG1032Z.set_wave](#dg1032zset_wave)
+    - [DG1032Z.set_wave_custom](#dg1032zset_wave_custom)
     - [DG1032Z.wait](#dg1032zwait)
     - [DG1032Z.write](#dg1032zwrite)
 
 ## DG1032Z
 
-[Show source in RIGOL_DG1032Z.py:17](../../SiglentDevices/RIGOL_DG1032Z.py#L17)
+[Show source in RIGOL_DG1032Z.py:18](../../SiglentDevices/RIGOL_DG1032Z.py#L18)
 
 Control RIGOL function generator
 
@@ -43,7 +42,7 @@ class DG1032Z(SiglentBase):
 
 ### DG1032Z.get_ch_state
 
-[Show source in RIGOL_DG1032Z.py:49](../../SiglentDevices/RIGOL_DG1032Z.py#L49)
+[Show source in RIGOL_DG1032Z.py:68](../../SiglentDevices/RIGOL_DG1032Z.py#L68)
 
 Get channel on/off state
 
@@ -64,7 +63,7 @@ def get_ch_state(self, ch=1):
 
 ### DG1032Z.get_mod_am_state
 
-[Show source in RIGOL_DG1032Z.py:62](../../SiglentDevices/RIGOL_DG1032Z.py#L62)
+[Show source in RIGOL_DG1032Z.py:81](../../SiglentDevices/RIGOL_DG1032Z.py#L81)
 
 Get output modification state
 
@@ -85,7 +84,7 @@ def get_mod_am_state(self, ch=1):
 
 ### DG1032Z.get_wave
 
-[Show source in RIGOL_DG1032Z.py:73](../../SiglentDevices/RIGOL_DG1032Z.py#L73)
+[Show source in RIGOL_DG1032Z.py:92](../../SiglentDevices/RIGOL_DG1032Z.py#L92)
 
 Read out waveform being applied currently by AWG
 
@@ -111,7 +110,7 @@ def get_wave(self, ch=1):
 
 ### DG1032Z.set_amp
 
-[Show source in RIGOL_DG1032Z.py:117](../../SiglentDevices/RIGOL_DG1032Z.py#L117)
+[Show source in RIGOL_DG1032Z.py:136](../../SiglentDevices/RIGOL_DG1032Z.py#L136)
 
 Set channel amplitude
 
@@ -127,27 +126,27 @@ def set_amp(self, ch=1, amp=0):
     ...
 ```
 
-### DG1032Z.set_ch_state
+### DG1032Z.set_freq
 
-[Show source in RIGOL_DG1032Z.py:129](../../SiglentDevices/RIGOL_DG1032Z.py#L129)
+[Show source in RIGOL_DG1032Z.py:148](../../SiglentDevices/RIGOL_DG1032Z.py#L148)
 
-Turn channel on/off
+Set channel frequency in Hz
 
 #### Arguments
 
 - `ch` *int* - channel number, 1|2
-- `state` *bool* - if true, turn on channel output
+- `freq` *float* - frequency in Hz
 
 #### Signature
 
 ```python
-def set_ch_state(self, ch=1, state=False):
+def set_freq(self, ch=1, freq=1):
     ...
 ```
 
 ### DG1032Z.set_mod_am
 
-[Show source in RIGOL_DG1032Z.py:139](../../SiglentDevices/RIGOL_DG1032Z.py#L139)
+[Show source in RIGOL_DG1032Z.py:182](../../SiglentDevices/RIGOL_DG1032Z.py#L182)
 
 Set waveform modification for internal modulation
 
@@ -167,7 +166,7 @@ def set_mod_am(self, ch=1, waveform="SIN", depth=100, freq=1):
 
 ### DG1032Z.set_mod_am_state
 
-[Show source in RIGOL_DG1032Z.py:160](../../SiglentDevices/RIGOL_DG1032Z.py#L160)
+[Show source in RIGOL_DG1032Z.py:203](../../SiglentDevices/RIGOL_DG1032Z.py#L203)
 
 Get output modification state
 
@@ -187,14 +186,51 @@ def set_mod_am_state(self, ch=1, state=False):
     ...
 ```
 
-### DG1032Z.set_wave_arb
+### DG1032Z.set_offset
 
-[Show source in RIGOL_DG1032Z.py:175](../../SiglentDevices/RIGOL_DG1032Z.py#L175)
+[Show source in RIGOL_DG1032Z.py:160](../../SiglentDevices/RIGOL_DG1032Z.py#L160)
+
+Set channel offset in volts
+
+#### Arguments
+
+- `ch` *int* - channel number, 1|2
+- `offset` *float* - voltage in volts
+
+#### Signature
+
+```python
+def set_offset(self, ch=1, offset=1):
+    ...
+```
+
+### DG1032Z.set_state
+
+[Show source in RIGOL_DG1032Z.py:172](../../SiglentDevices/RIGOL_DG1032Z.py#L172)
+
+Turn channel on/off
+
+#### Arguments
+
+- `ch` *int* - channel number, 1|2
+- `state` *bool* - if true, turn on channel output
+
+#### Signature
+
+```python
+def set_state(self, ch=1, state=False):
+    ...
+```
+
+### DG1032Z.set_wave
+
+[Show source in RIGOL_DG1032Z.py:218](../../SiglentDevices/RIGOL_DG1032Z.py#L218)
 
 Setup arbitrary waveforms
 
 #### Arguments
 
+- `ch` *int* - channel number, 1|2
 - `waveform` *str* - one of SINusoid|SQUare|RAMP|PULSe|NOISe|USER|HARMonic|CUSTom|DC|KAISER|
                     ROUNDPM|SINC|NEGRAMP|ATTALT|AMPALT|STAIRDN|STAIRUP|STAIRUD|CPULSE|
                     PPULSE|NPULSE|TRAPEZIA|ROUNDHALF|ABSSINE|ABSSINEHALF|SINETRA|
@@ -215,7 +251,6 @@ Setup arbitrary waveforms
                     ISO76372TP1|ISO76372TP2A|ISO76372TP2B|ISO76372TP3A|ISO76372TP3B|
                     ISO76372TP4|ISO76372TP5A|ISO76372TP5B|ISO167502SP|ISO167502VR|SRC|
                     IGNITION|NIMHDISCHARGE|GATEVIBR
-- `ch` *int* - channel number, 1|2
 - `freq` *float* - frequency in Hz. 1 uHz to 60 MHz
 - `amp` *float* - Vpp in volts
 - `offset` *float* - DC offset in volts
@@ -224,94 +259,32 @@ Setup arbitrary waveforms
 #### Signature
 
 ```python
-def set_wave_arb(self, waveform="", ch=1, freq=1000, amp=1, offset=0, phase=0):
+def set_wave(self, ch=1, waveform="", freq=1000, amp=1, offset=0, phase=0):
     ...
 ```
 
-### DG1032Z.set_wave_dc
+### DG1032Z.set_wave_custom
 
-[Show source in RIGOL_DG1032Z.py:215](../../SiglentDevices/RIGOL_DG1032Z.py#L215)
+[Show source in RIGOL_DG1032Z.py:271](../../SiglentDevices/RIGOL_DG1032Z.py#L271)
 
-Set DC output
+Send a custom waveform to the AWG
 
 #### Arguments
 
 - `ch` *int* - channel number, 1|2
-- `offset` *float* - DC offset in volts
+- `voltages` *iterable* - list of voltages to set
+- `period` *float* - duration of voltage sequence, assuming equally spaced points.
 
 #### Signature
 
 ```python
-def set_wave_dc(self, ch=1, offset=0):
-    ...
-```
-
-### DG1032Z.set_wave_sin
-
-[Show source in RIGOL_DG1032Z.py:225](../../SiglentDevices/RIGOL_DG1032Z.py#L225)
-
-Set AWG to produce a sine wave
-
-#### Arguments
-
-- `ch` *int* - channel number, 1|2
-- `freq` *float* - frequency in Hz. 1 uHz to 60 MHz
-- `amp` *float* - Vpp in volts
-- `offset` *float* - DC offset in volts
-- `phase` *float* - phase in degrees. 0 to 360 deg
-
-#### Signature
-
-```python
-def set_wave_sin(self, ch=1, freq=1000, amp=5, offset=0, phase=0):
-    ...
-```
-
-### DG1032Z.set_wave_square
-
-[Show source in RIGOL_DG1032Z.py:237](../../SiglentDevices/RIGOL_DG1032Z.py#L237)
-
-Set AWG to produce a square wave
-
-#### Arguments
-
-- `ch` *int* - channel number, 1|2
-- `freq` *float* - frequency in Hz. 1 uHz to 60 MHz
-- `amp` *float* - Vpp in volts
-- `offset` *float* - DC offset in volts
-- `phase` *float* - phase in degrees. 0 to 360 deg
-
-#### Signature
-
-```python
-def set_wave_square(self, ch=1, freq=1000, amp=5, offset=0, phase=0):
-    ...
-```
-
-### DG1032Z.set_wave_triangle
-
-[Show source in RIGOL_DG1032Z.py:249](../../SiglentDevices/RIGOL_DG1032Z.py#L249)
-
-Set AWG to produce a triangle wave
-
-#### Arguments
-
-- `ch` *int* - channel number, 1|2
-- `freq` *float* - frequency in Hz. 1 uHz to 60 MHz
-- `amp` *float* - Vpp in volts
-- `offset` *float* - DC offset in volts
-- `phase` *float* - phase in degrees. 0 to 360 deg
-
-#### Signature
-
-```python
-def set_wave_triangle(self, ch=1, freq=1000, amp=5, offset=0, phase=0):
+def set_wave_custom(self, ch, voltages, period):
     ...
 ```
 
 ### DG1032Z.wait
 
-[Show source in RIGOL_DG1032Z.py:261](../../SiglentDevices/RIGOL_DG1032Z.py#L261)
+[Show source in RIGOL_DG1032Z.py:316](../../SiglentDevices/RIGOL_DG1032Z.py#L316)
 
 Wait until operation has completed. Block operation until completed
 
@@ -324,7 +297,7 @@ def wait(self):
 
 ### DG1032Z.write
 
-[Show source in RIGOL_DG1032Z.py:265](../../SiglentDevices/RIGOL_DG1032Z.py#L265)
+[Show source in RIGOL_DG1032Z.py:320](../../SiglentDevices/RIGOL_DG1032Z.py#L320)
 
 Write string to device.
 

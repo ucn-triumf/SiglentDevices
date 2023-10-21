@@ -13,6 +13,7 @@
 """
 
 from . import SiglentBase
+import numpy as np
 
 class DG1032Z(SiglentBase):
     """Control RIGOL function generator
@@ -144,7 +145,31 @@ class DG1032Z(SiglentBase):
 
         self.write(f'SOUR{ch}:VOLT {amp}')
 
-    def set_ch_state(self, ch=1, state=False):
+    def set_freq(self, ch=1, freq=1):
+        """Set channel frequency in Hz
+
+        Args:
+            ch (int): channel number, 1|2
+            freq (float): frequency in Hz
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        self.write(f'SOUR{ch}:FREQ {freq}')
+
+    def set_offset(self, ch=1, offset=1):
+        """Set channel offset in volts
+
+        Args:
+            ch (int): channel number, 1|2
+            offset (float): voltage in volts
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        self.write(f'SOUR{ch}:VOLT:OFFS {offset}')
+
+    def set_state(self, ch=1, state=False):
         """Turn channel on/off
 
         Args:
@@ -243,15 +268,50 @@ class DG1032Z(SiglentBase):
         # set waveform
         self.write(f'SOUR{ch}:APPL:{mode} {freq},{amp},{offset},{phase}')
 
-    def set_wave_custom(self, ch, voltages):
+    def set_wave_custom(self, ch, voltages, period):
         """Send a custom waveform to the AWG
 
         Args:
             ch (int): channel number, 1|2
             voltages (iterable): list of voltages to set
+            period (float): duration of voltage sequence, assuming equally spaced points.
         """
 
+        # data type
+        voltages = np.array(voltages)
 
+        # normalize voltages
+        maxv = max(voltages)
+        minv = min(voltages)
+
+        npts = len(voltages)
+        amp = maxv - minv
+        offset = (maxv+minv)/2
+
+        voltages = (voltages - offset) / amp
+
+        # set amp values
+        self.set_offset(ch, offset*2)
+        self.set_amp(ch, amp*4)
+
+        # convert voltages to bytes
+        voltages = voltages * 8191.5 + 8191.5
+        voltages = voltages.astype('<H')
+        voltages = voltages.tobytes()
+
+        # make header line
+        nchar = len(str(npts*2))
+        header = f'SOUR{ch}:DATA:DAC16 VOLATILE,END,#{nchar}{npts*2}'
+
+        # write voltages to out
+        self.write_raw(bytes(header, 'ascii') + voltages)
+
+        # set arb in srate mode
+        self.write(f'SOURCE{ch}:FUNCTION:ARB:MODE SRATE')
+
+        # set readback rate
+        dt = npts/period
+        self.write(f'SOURCE{ch}:FUNCTION:ARB:SRATE {dt:E}')
 
     def wait(self):
         """Wait until operation has completed. Block operation until completed"""
