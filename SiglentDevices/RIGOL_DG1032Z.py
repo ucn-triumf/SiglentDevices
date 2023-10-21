@@ -114,6 +114,17 @@ class DG1032Z(SiglentBase):
 
         return self.query(f'SOUR{ch}:VOLT:OFFS?')
 
+    def get_phase(self, ch=1):
+        """Get channel phase
+
+        Args:
+            ch (int): channel number, 1|2
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        return self.query(f'SOUR{ch}:PHAS?')
+
     def get_wave(self, ch=1):
         """Read out waveform being applied currently by AWG
 
@@ -238,6 +249,18 @@ class DG1032Z(SiglentBase):
             raise RuntimeError('ch must be one of 1 or 2')
 
         self.write(f'SOUR{ch}:VOLT:OFFS {offset}')
+
+    def set_phase(self, ch=1, phase=0):
+        """Set channel phase
+
+        Args:
+            ch (int): channel number, 1|2
+            phase (float): phase in degrees
+        """
+        if ch not in (1, 2):
+            raise RuntimeError('ch must be one of 1 or 2')
+
+        return self.write(f'SOUR{ch}:PHAS {phase}')
 
     def set_vpp(self, ch=1, vpp=0):
         """Set channel peak-peak amplitude
