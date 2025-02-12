@@ -16,7 +16,6 @@ class SiglentBase(object):
     """
 
     # global variables
-
     ADDRESS = 'TCPIP::{host}::INSTR'
 
     def __init__(self, hostname):
